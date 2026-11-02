@@ -1,2 +1,20 @@
 # Airsoft-MultipurposeGameModeTool
-Multi purpose game mode tool use for airsoft games
+
+Herramienta multipropósito para partidas de airsoft, con hardware y software propios. Un mismo dispositivo cubre cinco modos de juego: captura la bandera, control de zona, rey de la colina, desactivación de bomba y extracción de paquete.
+
+## Estructura
+
+| Carpeta | Contenido |
+| --- | --- |
+| `Hw` | Hardware: esquemático en KiCad, PDF, lista de materiales y asignación de pines. |
+| `Sw` | Software y firmware. Todavía vacío. |
+
+## Estado
+
+Hardware en versión 0.4, en [`Hw/esquematico_v1`](Hw/esquematico_v1/README.md). Usa un ESP32-S3-DevKitC-1 N16R8 con pantalla TFT de 3.5 pulgadas (480x320, bus paralelo de 8 bits y touch resistivo), teclado 4x4, dos switches, un push button, LEDs rojo y azul, y audio por I2S con un amplificador MAX98357A y una bocina de 4 Ω. La alimentación tiene dos opciones y se construye una sola: un módulo LUORNG V8 para dos celdas 18650 (opción A) o TP4056 con MT3608 discretos (opción B).
+
+Software todavía no empieza. Parte de la asignación de pines del hardware.
+
+## Requisitos de diseño
+
+La autonomía mínima es de 5 horas, en periodos de uso de unos 30 minutos. El audio debe oírse a 15 metros al aire libre. El microcontrolador debe poder comprarse fácilmente en México y los precios se calculan en pesos mexicanos.
