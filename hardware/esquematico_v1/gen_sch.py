@@ -9,6 +9,8 @@ import sys
 import uuid as _uuid
 
 LIBDIR = "/usr/share/kicad/symbols"
+VARIANT = (sys.argv[3] if len(sys.argv) > 3 else "A").upper()
+assert VARIANT in ("A", "B")
 PROJECT = "airsoft_tool"
 G = 2.54
 
@@ -206,6 +208,10 @@ J1 = ["3V3", "3V3", "RST", "GPIO4", "GPIO5", "GPIO6", "GPIO7", "GPIO15", "GPIO16
 J3 = ["GND", "GPIO43_TX", "GPIO44_RX", "GPIO1", "GPIO2", "GPIO42", "GPIO41", "GPIO40", "GPIO39",
       "GPIO38", "GPIO37", "GPIO36", "GPIO35", "GPIO0", "GPIO45", "GPIO48", "GPIO47", "GPIO21",
       "GPIO20", "GPIO19", "GND", "GND"]
+MOD = use_box("LUORNG_V8_2x18650", "M",
+              [("1", "BAT+"), ("2", "BAT-")],
+              [("3", "5V OUT"), ("4", "GND"), ("5", "3V OUT")],
+              width=25.4, desc="Shield LUORNG V8 para 2 celdas 18650 en paralelo, carga USB-C o micro USB, salidas 5 V 2.2 A y 3 V 1 A")
 MCU = use_box(
     "ESP32-S3-DevKitC-1_N16R8", "U",
     [(str(i + 1), n) for i, n in enumerate(J1)],
@@ -312,47 +318,70 @@ text("LEDs a 5 V con MOSFET, unos 20 mA cada uno. Indican equipo activo y parpad
 text("Audio: MAX98357A por I2S, 3.2 W en 4 ohm a 5 V. SD a 3V3 mezcla L+R, GAIN abierto = 9 dB. C3 y C4 junto al modulo.", 228, 249)
 
 # ---------------------------------------------------------------- alimentación
-frame(10, 205, 215, 285)
-text("ALIMENTACION: 1S2P 18650, CARGA USB-C, ELEVADOR A 5 V", 13, 209, 2, True)
-place(BAT, "BT1", "18650", 33.02, 223.52, {"1": "VBAT_CELDA", "2": "BAT_NEG"}, rot=270, ref_at=(0, -3.81, 1), val_at=(0, 3.81, 1))
-place(BAT, "BT2", "18650", 33.02, 236.22, {"1": "VBAT_CELDA", "2": "BAT_NEG"}, rot=270, ref_at=(0, -3.81, 1), val_at=(0, 3.81, 1))
-place(CHG, "U2", "TP4056 USB-C con proteccion", 81.28, 231.14,
-      {"1": None, "2": None, "3": "VBAT_CELDA", "4": "BAT_NEG", "5": "VBAT_PROT", "6": "GND"})
-place(SPST, "SW4", "Encendido", 132.08, 220.98, {"1": "VBAT_PROT", "2": "VBAT_SW"}, ref_at=H[0], val_at=H[1])
-place(MT, "U3", "MT3608", 180.34, 222.25,
-      {"1": "SW_BOOST", "2": "GND", "3": "FB_5V", "4": "VBAT_SW", "5": "VBAT_SW", "6": None},
-      ref_at=(0, -12.7, 1), val_at=(0, -10.16, 1))
-place(C, "C5", "22uF 10V", 112.0, 245.0, {"1": "VBAT_SW", "2": "GND"})
-place(IND, "L1", "22uH 3A", 130.0, 245.0, {"1": "VBAT_SW", "2": "SW_BOOST"})
-place(D, "D4", "SS34", 148.0, 245.0, {"1": "+5V", "2": "SW_BOOST"}, rot=270)
-place(C, "C6", "22uF 10V", 170.0, 245.0, {"1": "+5V", "2": "GND"})
-place(R, "R15", "100k", 190.0, 245.0, {"1": "+5V", "2": "FB_5V"})
-place(R, "R16", "13k", 204.0, 245.0, {"1": "FB_5V", "2": "GND"})
-place(R, "R13", "100k", 121.0, 266.0, {"1": "VBAT_SW", "2": "VBAT_ADC"})
-place(R, "R14", "100k", 139.0, 266.0, {"1": "VBAT_ADC", "2": "GND"})
-place(C, "C2", "100nF", 157.0, 266.0, {"1": "VBAT_ADC", "2": "GND"})
-text("Carga por el USB-C del TP4056 (IN+/IN- son su conector).", 13, 252)
-text("D4 es el diodo del elevador y bloquea el retorno del USB del DevKit.", 13, 255)
-text("R13/R14: 4.2 V de bateria -> 2.1 V en GPIO10 (ADC1).", 13, 258)
-text("Consumo estimado ~400 mA de bateria. 2 x 3000 mAh", 13, 263)
-text("nominales dan unas 10 h, el doble de las 5 h pedidas.", 13, 266)
-text("MT3608: Vout = 0.6 V x (1 + R15/R16) = 5.2 V en el riel, con FB despues de D4.", 13, 271)
-text("EN a VIN. L1 con corriente de saturacion de 3 A o mas.", 13, 274)
+if VARIANT == "B":
+    frame(10, 205, 215, 285)
+    text("ALIMENTACION (OPCION B): 1S2P 18650, CARGA USB-C, ELEVADOR A 5 V", 13, 209, 2, True)
+    place(BAT, "BT1", "18650", 33.02, 223.52, {"1": "VBAT_CELDA", "2": "BAT_NEG"}, rot=270, ref_at=(0, -3.81, 1), val_at=(0, 3.81, 1))
+    place(BAT, "BT2", "18650", 33.02, 236.22, {"1": "VBAT_CELDA", "2": "BAT_NEG"}, rot=270, ref_at=(0, -3.81, 1), val_at=(0, 3.81, 1))
+    place(CHG, "U2", "TP4056 USB-C con proteccion", 81.28, 231.14,
+          {"1": None, "2": None, "3": "VBAT_CELDA", "4": "BAT_NEG", "5": "VBAT_PROT", "6": "GND"})
+    place(SPST, "SW4", "Encendido", 132.08, 220.98, {"1": "VBAT_PROT", "2": "VBAT_SW"}, ref_at=H[0], val_at=H[1])
+    place(MT, "U3", "MT3608", 180.34, 222.25,
+          {"1": "SW_BOOST", "2": "GND", "3": "FB_5V", "4": "VBAT_SW", "5": "VBAT_SW", "6": None},
+          ref_at=(0, -12.7, 1), val_at=(0, -10.16, 1))
+    place(C, "C5", "22uF 10V", 112.0, 245.0, {"1": "VBAT_SW", "2": "GND"})
+    place(IND, "L1", "22uH 3A", 130.0, 245.0, {"1": "VBAT_SW", "2": "SW_BOOST"})
+    place(D, "D4", "SS34", 148.0, 245.0, {"1": "+5V", "2": "SW_BOOST"}, rot=270)
+    place(C, "C6", "22uF 10V", 170.0, 245.0, {"1": "+5V", "2": "GND"})
+    place(R, "R15", "100k", 190.0, 245.0, {"1": "+5V", "2": "FB_5V"})
+    place(R, "R16", "13k", 204.0, 245.0, {"1": "FB_5V", "2": "GND"})
+    place(R, "R13", "100k", 121.0, 266.0, {"1": "VBAT_SW", "2": "VBAT_ADC"})
+    place(R, "R14", "100k", 139.0, 266.0, {"1": "VBAT_ADC", "2": "GND"})
+    place(C, "C2", "100nF", 157.0, 266.0, {"1": "VBAT_ADC", "2": "GND"})
+    text("Carga por el USB-C del TP4056 (IN+/IN- son su conector).", 13, 252)
+    text("D4 es el diodo del elevador y bloquea el retorno del USB del DevKit.", 13, 255)
+    text("R13/R14: 4.2 V de bateria -> 2.1 V en GPIO10 (ADC1).", 13, 258)
+    text("Consumo estimado ~400 mA de bateria. 2 x 3000 mAh", 13, 263)
+    text("nominales dan unas 10 h, el doble de las 5 h pedidas.", 13, 266)
+    text("MT3608: Vout = 0.6 V x (1 + R15/R16) = 5.2 V en el riel, con FB despues de D4.", 13, 271)
+    text("EN a VIN. L1 con corriente de saturacion de 3 A o mas.", 13, 274)
+    text("OPCION B: diseno discreto con TP4056, interruptor y MT3608 (alternativa a la opcion A).", 13, 280)
+else:
+    frame(10, 205, 215, 285)
+    text("ALIMENTACION (OPCION A): MODULO LUORNG V8 PARA 2 x 18650, SALIDA DE 5 V", 13, 209, 2, True)
+    place(BAT, "BT1", "18650", 33.02, 223.52, {"1": "VBAT_POS", "2": "GND"}, rot=270, ref_at=(0, -3.81, 1), val_at=(0, 3.81, 1))
+    place(BAT, "BT2", "18650", 33.02, 236.22, {"1": "VBAT_POS", "2": "GND"}, rot=270, ref_at=(0, -3.81, 1), val_at=(0, 3.81, 1))
+    place(MOD, "M1", "LUORNG V8 18650 x2", 100.0, 231.14,
+          {"1": "VBAT_POS", "2": "GND", "3": "+5V", "4": "GND", "5": None},
+          ref_at=(0, -9.0, 1), val_at=(0, 11.5, 1))
+    place(R, "R13", "100k", 150.0, 240.0, {"1": "VBAT_POS", "2": "VBAT_ADC"})
+    place(R, "R14", "100k", 168.0, 240.0, {"1": "VBAT_ADC", "2": "GND"})
+    place(C, "C2", "100nF", 186.0, 240.0, {"1": "VBAT_ADC", "2": "GND"})
+    text("M1 trae portapilas, carga USB-C o micro USB, boton ON/OFF y protecciones.", 13, 252)
+    text("5V OUT (2.2 A nominales, 3 A de emergencia) al riel +5V y al pin 5V del DevKit. 3V OUT sin usar.", 13, 255)
+    text("BAT+ y BAT-: contactos del portapilas, de ahi sale la medicion. BAT- y GND son comunes en el modulo (por confirmar).", 13, 258)
+    text("R13/R14: 4.2 V de bateria -> 2.1 V en GPIO10 (ADC1).", 13, 262)
+    text("Dejar el interruptor de modo del modulo en encendido continuo: en modo automatico se apaga con poca carga.", 13, 266)
+    text("Consumo estimado ~400 mA de bateria. 2 x 3000 mAh nominales dan unas 10 h, el doble de las 5 h pedidas.", 13, 270)
+    text("Pendiente: confirmar si el DevKit tiene diodo entre su USB y el pin 5V. Si no, no conectar USB con M1 encendido.", 13, 274)
 
 # ---------------------------------------------------------------- notas
 
 
 # ---------------------------------------------------------------- salida
-lib_txt = "\n".join(v[0] for v in LIB.values())
+POWER_NOTE = ("Alimentacion opcion A: modulo LUORNG V8 2x18650" if VARIANT == "A" else "Alimentacion opcion B: TP4056 + MT3608 discreto")
+used = {b[2] for b in BOM}
+lib_txt = "\n".join(v[0] for k, v in LIB.items() if k in used)
 out = f"""(kicad_sch (version 20230121) (generator eeschema)
   (uuid {ROOT_UUID})
   (paper "A3")
   (title_block
     (title "Herramienta multiproposito para airsoft")
     (date "2026-11-02")
-    (rev "v0.1")
+    (rev "v0.4-{VARIANT}")
     (comment 1 "Esquematico v1: ESP32-S3-DevKitC-1 + TFT 3.5in paralela")
     (comment 2 "Modos: bandera, zona, rey de la colina, bomba, extraccion")
+    (comment 4 "{POWER_NOTE}")
     (comment 3 "Conexiones por etiqueta de red: etiquetas iguales = mismo nodo")
   )
   (lib_symbols
