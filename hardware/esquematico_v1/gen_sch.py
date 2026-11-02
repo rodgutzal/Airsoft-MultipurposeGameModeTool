@@ -192,7 +192,8 @@ C = use_std("Device", "C")
 LED = use_std("Device", "LED")
 D = use_std("Device", "D")
 Q = use_std("Device", "Q_NMOS_GSD")
-BZ = use_std("Device", "Buzzer")
+SPK = use_std("Device", "Speaker")
+CP = use_std("Device", "C_Polarized")
 BAT = use_std("Device", "Battery_Cell")
 SPST = use_std("Switch", "SW_SPST")
 PUSH = use_std("Switch", "SW_Push")
@@ -225,6 +226,10 @@ CHG = use_box("TP4056_USB-C_con_proteccion", "U",
               [("1", "IN+"), ("2", "IN-")],
               [("3", "B+"), ("4", "B-"), ("5", "OUT+"), ("6", "OUT-")],
               width=20.32, desc="Modulo cargador TP4056 + DW01 + FS8205")
+AMP = use_box("MAX98357A_I2S_3W", "U",
+              [("1", "VIN"), ("2", "GND"), ("3", "SD"), ("4", "GAIN"), ("5", "DIN"), ("6", "BCLK"), ("7", "LRC")],
+              [("8", "OUT+"), ("9", "OUT-")],
+              width=20.32, desc="Modulo amplificador I2S clase D MAX98357A, 3.2 W en 4 ohm a 5 V")
 BST = use_box("Elevador_MT3608_5V", "U",
               [("1", "VIN+"), ("2", "VIN-")], [("3", "VOUT+"), ("4", "VOUT-")],
               width=20.32, desc="Modulo elevador ajustado a 5.1 V")
@@ -237,8 +242,8 @@ mcu_nets = {
     "15": "KEY_C2", "16": "VBAT_SENSE", "17": "KEY_F1", "18": "KEY_F2", "19": "KEY_F3",
     "20": "KEY_F4", "21": "+5V", "22": "GND",
     "23": "GND", "24": None, "25": None, "26": "LCD_RS", "27": "LCD_WR", "28": "LCD_CS",
-    "29": "LCD_RST", "30": "BUZZER", "31": "KEY_C4", "32": "KEY_C3", "33": None, "34": None,
-    "35": None, "36": None, "37": None, "38": "BTN_ACCION", "39": "SW_ARMADO",
+    "29": "LCD_RST", "30": "I2S_BCLK", "31": "KEY_C4", "32": "KEY_C3", "33": None, "34": None,
+    "35": None, "36": "I2S_DIN", "37": "I2S_LRC", "38": "BTN_ACCION", "39": "SW_ARMADO",
     "40": "SW_EQUIPO", "41": None, "42": None, "43": "GND", "44": "GND",
 }
 frame(10, 25, 215, 125)
@@ -246,7 +251,7 @@ text("MICROCONTROLADOR", 83, 29, 2, True)
 place(MCU, "U1", "ESP32-S3-DevKitC-1 N16R8", 147.32, 76.2, mcu_nets, stub=7.62)
 text("GPIO1 y GPIO2 son ADC1: leen el touch resistivo compartido con LCD_RS y LCD_WR.", 83, 112)
 text("GPIO35-37 los usa la PSRAM octal. GPIO19/20 son el USB nativo. GPIO43/44 quedan para depuracion.", 83, 115)
-text("GPIO0, GPIO45 y GPIO46 son pines de arranque: no conectar cargas que los fuercen en alto al encender.", 83, 118)
+text("GPIO0, GPIO45 y GPIO46 son pines de arranque: solo llevan entradas de alta impedancia (DIN, LRC y la compuerta de Q2 con 100k a GND).", 83, 118)
 text("GPIO48 maneja el LED RGB de la tarjeta v1.1: el boton solo lo lee como entrada.", 83, 121)
 
 # ---------------------------------------------------------------- pantalla
@@ -287,7 +292,7 @@ text("Switch cerrado = nivel bajo. SW1 abierto = equipo rojo, cerrado = equipo a
 
 # ---------------------------------------------------------------- salidas
 frame(225, 155, 405, 250)
-text("SALIDAS: LEDS DE EQUIPO Y BOCINA", 228, 159, 2, True)
+text("SALIDAS: LEDS DE EQUIPO Y AUDIO", 228, 159, 2, True)
 def canal_led(x0, y, color, rr, rg, rp, q, d, rl, r_led):
     n = "LED_" + color
     place(R, rg, "100", x0, y, {"1": n, "2": q + "_G"})
@@ -297,17 +302,15 @@ def canal_led(x0, y, color, rr, rg, rp, q, d, rl, r_led):
     place(R, rl, r_led, x0 + 73.66, y, {"1": "+5V", "2": n + "_A"})
 canal_led(238.76, 190.5, "ROJO", None, "R5", "R6", "Q1", "D1", "R7", "150")
 canal_led(322.58, 190.5, "AZUL", None, "R8", "R9", "Q2", "D2", "R10", "100")
-place(R, "R11", "100", 238.76, 231.14, {"1": "BUZZER", "2": "Q3_G"})
-place(R, "R12", "100k", 254.0, 231.14, {"1": "Q3_G", "2": "GND"})
-place(Q, "Q3", "AO3400A", 279.4, 231.14, {"1": "Q3_G", "2": "GND", "3": "BUZ_N"})
-place(BZ, "BZ1", "Buzzer pasivo 5 V", 304.8, 231.14, {"1": "+5V", "2": "BUZ_N"})
-place(D, "D3", "1N4148", 325.12, 231.14, {"1": "+5V", "2": "BUZ_N"}, rot=270)
-text("LEDs a 5 V con MOSFET, unos 20 mA cada uno.", 338, 222)
-text("Indican equipo activo y parpadean como", 338, 225)
-text("contador en el modo bomba. Para LEDs de", 338, 228)
-text("panel o tiras solo cambian R7 y R10.", 338, 231)
-text("Buzzer pasivo por PWM: un tono por evento.", 338, 236)
-text("D3 absorbe el pico inductivo al apagar.", 338, 239)
+place(AMP, "U4", "MAX98357A I2S", 270.0, 229.0,
+      {"1": "+5V", "2": "GND", "3": "+3V3", "4": None, "5": "I2S_DIN", "6": "I2S_BCLK", "7": "I2S_LRC",
+       "8": "SPK_P", "9": "SPK_N"})
+place(SPK, "LS1", "Bocina 4 ohm 3-5 W", 322.58, 229.0, {"1": "SPK_P", "2": "SPK_N"},
+      ref_at=(2.54, -6.35, 1), val_at=(2.54, 8.89, 1))
+place(CP, "C3", "470uF 10V", 356.0, 229.0, {"1": "+5V", "2": "GND"})
+place(C, "C4", "100nF", 372.0, 229.0, {"1": "+5V", "2": "GND"})
+text("LEDs a 5 V con MOSFET, unos 20 mA cada uno. Indican equipo activo y parpadean como contador en el modo bomba.", 228, 246)
+text("Audio: MAX98357A por I2S, 3.2 W en 4 ohm a 5 V. SD a 3V3 mezcla L+R, GAIN abierto = 9 dB. C3 y C4 junto al modulo.", 228, 249)
 
 # ---------------------------------------------------------------- alimentación
 frame(10, 205, 215, 285)

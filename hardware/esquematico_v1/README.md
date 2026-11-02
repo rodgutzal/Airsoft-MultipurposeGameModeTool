@@ -20,18 +20,26 @@ Las conexiones se hacen por etiqueta de red. Dos etiquetas con el mismo nombre s
 | 48 | BTN_ACCION | push button (push and hold); comparte línea con el LED RGB de la tarjeta |
 | 3 | LED_ROJO | compuerta de Q1 |
 | 46 | LED_AZUL | compuerta de Q2, pin de arranque con pull-down de 100k |
-| 40 | BUZZER | PWM a la compuerta de Q3 |
+| 40 | I2S_BCLK | reloj de bit del MAX98357A |
+| 45 | I2S_LRC | selección de canal; pin de arranque, solo carga una entrada de alta impedancia |
+| 0 | I2S_DIN | datos de audio; pin de arranque (botón BOOT de la tarjeta), solo carga una entrada de alta impedancia |
 | 10 | VBAT_SENSE | ADC1, divisor 1:2 |
 
-Libres: GPIO0 (botón BOOT), GPIO45 (arranque), GPIO43/44 (UART de depuración). No usar: GPIO19/20 (USB nativo) ni GPIO35 a 37 (PSRAM octal).
+Libres: GPIO43/44 (UART de depuración). Se evitó usarlos para I2S porque el puente USB-UART de la tarjeta maneja GPIO44 y chocaría con la salida de datos. No usar: GPIO19/20 (USB nativo) ni GPIO35 a 37 (PSRAM octal).
 
 LCD_RD queda fijo en alto con R1. Si hace falta leer el ID del controlador (ILI9486 o ST7796U, cambia según el lote) se mueve a un pin libre.
 
 ## Alimentación
 
-Dos celdas 18650 en paralelo, cargador TP4056 con protección y USB-C, interruptor de encendido y elevador MT3608 ajustado a 5.1 V. El riel de 5 V alimenta la pantalla, los LEDs, el buzzer y el pin 5V del DevKit, cuyo regulador da los 3.3 V. D4 evita que el USB del DevKit empuje corriente hacia el elevador.
+Dos celdas 18650 en paralelo, cargador TP4056 con protección y USB-C, interruptor de encendido y elevador MT3608 ajustado a 5.1 V. El riel de 5 V alimenta la pantalla, los LEDs, el amplificador de audio y el pin 5V del DevKit, cuyo regulador da los 3.3 V. D4 evita que el USB del DevKit empuje corriente hacia el elevador.
 
 El consumo estimado es de 400 mA desde la batería con WiFi encendido, pantalla con retroiluminación completa y un LED prendido. Con 6000 mAh nominales salen unas 10 horas, el doble de las 5 horas pedidas. Hay que medirlo en el prototipo.
+
+## Audio
+
+El buzzer pasivo del borrador inicial (unos 85 dB a 10 cm) quedaría en unos 40 dB a 15 m, por debajo del ruido de un campo. Se cambió por un módulo MAX98357A (I2S, clase D, 3.2 W en 4 Ω a 5 V) con una bocina de 4 Ω y 3 a 5 W. La estimación es de unos 95 dB a 1 m y unos 70 dB a 15 m, sin medir. Si la bocina elegida rinde menos de 90 dB a 1 W y 1 m, el alcance baja en la misma proporción.
+
+En picos el amplificador puede pedir unos 0.8 A a 5 V. Con la batería baja, el módulo MT3608 (límite real cercano a 1 A de salida) puede ser el cuello de botella, por eso C3 de 470 µF va junto al amplificador. Conviene limitar el volumen por firmware a la mitad y medir la caída de 5 V con el volumen máximo antes de cerrar el diseño.
 
 ## Lista de materiales
 
@@ -52,17 +60,18 @@ Precios aproximados en MXN, sin verificar en tienda (Mercado Libre y Amazon MX n
 | 1 | SW3 | Push button de panel 16 a 22 mm | 40 |
 | 1 | D1 | LED rojo 10 mm | 5 |
 | 1 | D2 | LED azul 10 mm | 5 |
-| 1 | BZ1 | Buzzer pasivo 5 V | 15 |
-| 3 | Q1, Q2, Q3 | MOSFET N AO3400A (SOT-23); en perfboard sirve 2N7000 TO-92 | 5 |
-| 1 | D3 | 1N4148 | 2 |
+| 1 | U4 | Módulo amplificador I2S MAX98357A | 90 (estimado) |
+| 1 | LS1 | Bocina 4 Ω, 3 a 5 W, cono de 40 a 57 mm | 60 (estimado) |
+| 2 | Q1, Q2 | MOSFET N AO3400A (SOT-23); en perfboard sirve 2N7000 TO-92 | 5 |
 | 1 | D4 | SS34 | 5 |
 | 4 | R1, R2, R3, R4 | 10k | 1 |
-| 4 | R5, R8, R10, R11 | 100 Ω | 1 |
-| 5 | R6, R9, R12, R13, R14 | 100k | 1 |
+| 3 | R5, R8, R10 | 100 Ω | 1 |
+| 4 | R6, R9, R13, R14 | 100k | 1 |
 | 1 | R7 | 150 Ω | 1 |
-| 2 | C1, C2 | 100 nF | 2 |
+| 3 | C1, C2, C4 | 100 nF | 2 |
+| 1 | C3 | 470 µF 10 V electrolítico | 8 |
 
-Total aproximado: 1,250 MXN por unidad sin gabinete.
+Total aproximado: 1,350 MXN por unidad sin gabinete.
 
 Precios confirmados para comparar: ESP32 DevKit V1 (WROOM-32) a 199 en Steren y 130 + IVA en Teknomovo; Raspberry Pi Pico 2 W a 208 en 330ohms. El análisis completo de la elección del micro está en el documento del paso 1.
 
