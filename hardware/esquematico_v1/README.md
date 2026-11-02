@@ -23,7 +23,7 @@ Las conexiones se hacen por etiqueta de red. Dos etiquetas con el mismo nombre s
 | 40 | I2S_BCLK | reloj de bit del MAX98357A |
 | 45 | I2S_LRC | selección de canal; pin de arranque, solo carga una entrada de alta impedancia |
 | 0 | I2S_DIN | datos de audio; pin de arranque (botón BOOT de la tarjeta), solo carga una entrada de alta impedancia |
-| 10 | VBAT_SENSE | ADC1, divisor 1:2 |
+| 10 | VBAT_ADC | ADC1, divisor 1:2 |
 
 Libres: GPIO43/44 (UART de depuración). Se evitó usarlos para I2S porque el puente USB-UART de la tarjeta maneja GPIO44 y chocaría con la salida de datos. No usar: GPIO19/20 (USB nativo) ni GPIO35 a 37 (PSRAM octal).
 
@@ -31,7 +31,7 @@ LCD_RD queda fijo en alto con R1. Si hace falta leer el ID del controlador (ILI9
 
 ## Alimentación
 
-Dos celdas 18650 en paralelo, cargador TP4056 con protección y USB-C, interruptor de encendido y elevador MT3608 ajustado a 5.1 V. El riel de 5 V alimenta la pantalla, los LEDs, el amplificador de audio y el pin 5V del DevKit, cuyo regulador da los 3.3 V. D4 evita que el USB del DevKit empuje corriente hacia el elevador.
+Dos celdas 18650 en paralelo, cargador TP4056 con protección y USB-C, interruptor de encendido y un elevador con el circuito integrado MT3608 (SOT-23-6) y sus componentes mínimos: capacitor de entrada C5 de 22 µF, inductor L1 de 22 µH y 3 A de saturación, diodo Schottky D4 (SS34), capacitor de salida C6 de 22 µF y el divisor de realimentación R15 de 100k y R16 de 13k. EN va a VIN. La salida es 0.6 V × (1 + 100k / 13k) = 5.2 V. La realimentación se toma después de D4, así que la caída del diodo queda compensada. El riel de 5 V alimenta la pantalla, los LEDs, el amplificador de audio y el pin 5V del DevKit, cuyo regulador da los 3.3 V. D4 también bloquea el retorno desde el USB del DevKit hacia el inductor.
 
 El consumo estimado es de 400 mA desde la batería con WiFi encendido, pantalla con retroiluminación completa y un LED prendido. Con 6000 mAh nominales salen unas 10 horas, el doble de las 5 horas pedidas. Hay que medirlo en el prototipo.
 
@@ -39,7 +39,7 @@ El consumo estimado es de 400 mA desde la batería con WiFi encendido, pantalla 
 
 El buzzer pasivo del borrador inicial (unos 85 dB a 10 cm) quedaría en unos 40 dB a 15 m, por debajo del ruido de un campo. Se cambió por un módulo MAX98357A (I2S, clase D, 3.2 W en 4 Ω a 5 V) con una bocina de 4 Ω y 3 a 5 W. La estimación es de unos 95 dB a 1 m y unos 70 dB a 15 m, sin medir. Si la bocina elegida rinde menos de 90 dB a 1 W y 1 m, el alcance baja en la misma proporción.
 
-En picos el amplificador puede pedir unos 0.8 A a 5 V. Con la batería baja, el módulo MT3608 (límite real cercano a 1 A de salida) puede ser el cuello de botella, por eso C3 de 470 µF va junto al amplificador. Conviene limitar el volumen por firmware a la mitad y medir la caída de 5 V con el volumen máximo antes de cerrar el diseño.
+En picos el amplificador puede pedir unos 0.8 A a 5 V. Con la batería baja, el MT3608 (interruptor interno de 2 A, unos 1 A de salida a 5.2 V con 3.3 V de batería) puede ser el cuello de botella, por eso C3 de 470 µF va junto al amplificador. Conviene limitar el volumen por firmware a la mitad y medir la caída de 5 V con el volumen máximo antes de cerrar el diseño.
 
 ## Lista de materiales
 
@@ -53,7 +53,9 @@ Precios aproximados en MXN, sin verificar en tienda (Mercado Libre y Amazon MX n
 | 2 | BT1, BT2 | Celda 18650 3000 mAh de marca (Samsung 30Q, LG HG2 o similar) | 120 |
 | 1 | | Portapilas 2x18650 | 35 |
 | 1 | U2 | Módulo TP4056 USB-C con protección (DW01) | 35 |
-| 1 | U3 | Módulo elevador MT3608 | 35 |
+| 1 | U3 | Circuito integrado MT3608 (SOT-23-6) | 8 (estimado) |
+| 1 | L1 | Inductor de potencia 22 µH, saturación de 3 A o más, blindado | 12 (estimado) |
+| 2 | C5, C6 | Capacitor cerámico 22 µF 10 V (0805 o 1206) | 5 (estimado) |
 | 1 | SW4 | Interruptor de encendido | 15 |
 | 1 | SW1 | Interruptor de palanca (selector de equipo) | 25 |
 | 1 | SW2 | Interruptor de llave (armado de bomba) | 80 |
@@ -66,17 +68,20 @@ Precios aproximados en MXN, sin verificar en tienda (Mercado Libre y Amazon MX n
 | 1 | D4 | SS34 | 5 |
 | 4 | R1, R2, R3, R4 | 10k | 1 |
 | 3 | R5, R8, R10 | 100 Ω | 1 |
-| 4 | R6, R9, R13, R14 | 100k | 1 |
+| 5 | R6, R9, R13, R14, R15 | 100k | 1 |
+| 1 | R16 | 13k | 1 |
 | 1 | R7 | 150 Ω | 1 |
 | 3 | C1, C2, C4 | 100 nF | 2 |
 | 1 | C3 | 470 µF 10 V electrolítico | 8 |
 
-Total aproximado: 1,350 MXN por unidad sin gabinete.
+Total aproximado: 1,343 MXN por unidad sin gabinete.
 
 Precios confirmados para comparar: ESP32 DevKit V1 (WROOM-32) a 199 en Steren y 130 + IVA en Teknomovo; Raspberry Pi Pico 2 W a 208 en 330ohms. El análisis completo de la elección del micro está en el documento del paso 1.
 
 ## Pendientes
 
+- El MT3608, el inductor y los capacitores del elevador son componentes SMD. Para soldarlos hace falta una PCB propia o una placa adaptadora SOT-23-6; en perfboard no se pueden montar directo.
+- Verificar con el prototipo que el riel quede entre 5.1 y 5.3 V, la tolerancia de las resistencias de 1% del divisor da unos 3% de variación.
 - Confirmar qué líneas de datos usa el touch en la pantalla que llegue (sketch de diagnóstico de MCUFRIEND_kbv).
 - Medir el consumo real y la corriente de la retroiluminación.
 - Decidir gabinete y conectores para LEDs y switches de panel.

@@ -194,6 +194,8 @@ D = use_std("Device", "D")
 Q = use_std("Device", "Q_NMOS_GSD")
 SPK = use_std("Device", "Speaker")
 CP = use_std("Device", "C_Polarized")
+IND = use_std("Device", "L")
+MT = use_std("Regulator_Switching", "MT3608")
 BAT = use_std("Device", "Battery_Cell")
 SPST = use_std("Switch", "SW_SPST")
 PUSH = use_std("Switch", "SW_Push")
@@ -230,16 +232,13 @@ AMP = use_box("MAX98357A_I2S_3W", "U",
               [("1", "VIN"), ("2", "GND"), ("3", "SD"), ("4", "GAIN"), ("5", "DIN"), ("6", "BCLK"), ("7", "LRC")],
               [("8", "OUT+"), ("9", "OUT-")],
               width=20.32, desc="Modulo amplificador I2S clase D MAX98357A, 3.2 W en 4 ohm a 5 V")
-BST = use_box("Elevador_MT3608_5V", "U",
-              [("1", "VIN+"), ("2", "VIN-")], [("3", "VOUT+"), ("4", "VOUT-")],
-              width=20.32, desc="Modulo elevador ajustado a 5.1 V")
 
 # ---------------------------------------------------------------- microcontrolador
 mcu_nets = {
     "1": "+3V3", "2": "+3V3", "3": None,
     "4": "LCD_D0", "5": "LCD_D1", "6": "LCD_D2", "7": "LCD_D3", "8": "LCD_D4", "9": "LCD_D5",
     "10": "LCD_D6", "11": "LCD_D7", "12": "KEY_C1", "13": "LED_ROJO", "14": "LED_AZUL",
-    "15": "KEY_C2", "16": "VBAT_SENSE", "17": "KEY_F1", "18": "KEY_F2", "19": "KEY_F3",
+    "15": "KEY_C2", "16": "VBAT_ADC", "17": "KEY_F1", "18": "KEY_F2", "19": "KEY_F3",
     "20": "KEY_F4", "21": "+5V", "22": "GND",
     "23": "GND", "24": None, "25": None, "26": "LCD_RS", "27": "LCD_WR", "28": "LCD_CS",
     "29": "LCD_RST", "30": "I2S_BCLK", "31": "KEY_C4", "32": "KEY_C3", "33": None, "34": None,
@@ -320,17 +319,25 @@ place(BAT, "BT2", "18650", 33.02, 236.22, {"1": "VBAT_CELDA", "2": "BAT_NEG"}, r
 place(CHG, "U2", "TP4056 USB-C con proteccion", 81.28, 231.14,
       {"1": None, "2": None, "3": "VBAT_CELDA", "4": "BAT_NEG", "5": "VBAT_PROT", "6": "GND"})
 place(SPST, "SW4", "Encendido", 132.08, 220.98, {"1": "VBAT_PROT", "2": "VBAT_SW"}, ref_at=H[0], val_at=H[1])
-place(BST, "U3", "MT3608 ajustado a 5.1 V", 182.88, 231.14,
-      {"1": "VBAT_SW", "2": "GND", "3": "5V_BOOST", "4": "GND"})
-place(D, "D4", "SS34", 205.74, 250.19, {"1": "+5V", "2": "5V_BOOST"}, rot=270)
-place(R, "R13", "100k", 124.46, 256.54, {"1": "VBAT_SW", "2": "VBAT_SENSE"})
-place(R, "R14", "100k", 142.24, 256.54, {"1": "VBAT_SENSE", "2": "GND"})
-place(C, "C2", "100nF", 160.02, 256.54, {"1": "VBAT_SENSE", "2": "GND"})
+place(MT, "U3", "MT3608", 180.34, 222.25,
+      {"1": "SW_BOOST", "2": "GND", "3": "FB_5V", "4": "VBAT_SW", "5": "VBAT_SW", "6": None},
+      ref_at=(0, -12.7, 1), val_at=(0, -10.16, 1))
+place(C, "C5", "22uF 10V", 112.0, 245.0, {"1": "VBAT_SW", "2": "GND"})
+place(IND, "L1", "22uH 3A", 130.0, 245.0, {"1": "VBAT_SW", "2": "SW_BOOST"})
+place(D, "D4", "SS34", 148.0, 245.0, {"1": "+5V", "2": "SW_BOOST"}, rot=270)
+place(C, "C6", "22uF 10V", 170.0, 245.0, {"1": "+5V", "2": "GND"})
+place(R, "R15", "100k", 190.0, 245.0, {"1": "+5V", "2": "FB_5V"})
+place(R, "R16", "13k", 204.0, 245.0, {"1": "FB_5V", "2": "GND"})
+place(R, "R13", "100k", 121.0, 266.0, {"1": "VBAT_SW", "2": "VBAT_ADC"})
+place(R, "R14", "100k", 139.0, 266.0, {"1": "VBAT_ADC", "2": "GND"})
+place(C, "C2", "100nF", 157.0, 266.0, {"1": "VBAT_ADC", "2": "GND"})
 text("Carga por el USB-C del TP4056 (IN+/IN- son su conector).", 13, 252)
-text("D4 evita retroalimentar el elevador con el USB del DevKit.", 13, 255)
+text("D4 es el diodo del elevador y bloquea el retorno del USB del DevKit.", 13, 255)
 text("R13/R14: 4.2 V de bateria -> 2.1 V en GPIO10 (ADC1).", 13, 258)
 text("Consumo estimado ~400 mA de bateria. 2 x 3000 mAh", 13, 263)
 text("nominales dan unas 10 h, el doble de las 5 h pedidas.", 13, 266)
+text("MT3608: Vout = 0.6 V x (1 + R15/R16) = 5.2 V en el riel, con FB despues de D4.", 13, 271)
+text("EN a VIN. L1 con corriente de saturacion de 3 A o mas.", 13, 274)
 
 # ---------------------------------------------------------------- notas
 
