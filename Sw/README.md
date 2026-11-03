@@ -2,7 +2,19 @@
 
 Firmware de la herramienta, con ESP-IDF v6.1 para el ESP32-S3-DevKitC-1 N16R8.
 
-Por ahora es un proyecto base: al arrancar imprime por el monitor serie el chip, el tamaño de la flash y el de la PSRAM, y no hace nada más. Los pines están en `main/pines.h` y salen de la asignación de [`../Hw/esquematico_v1/README.md`](../Hw/esquematico_v1/README.md).
+Por ahora es un proyecto base: al arrancar inicializa la RAM y los puertos simples, imprime por el monitor serie el chip, la flash y la PSRAM, y no hace nada más.
+
+## Estructura
+
+El código vive en `AirsoftToolSw/` (declarada como componente en `CMakeLists.txt` con `EXTRA_COMPONENT_DIRS`, en lugar de la carpeta `main` por defecto).
+
+| Archivo | Contenido |
+| --- | --- |
+| `main.c` | `app_main`: llama a `InitRam` y `InitMainProcess`. |
+| `GlobalDefine.h` | Definiciones globales: pines (de [`../Hw/esquematico_v1/README.md`](../Hw/esquematico_v1/README.md)), cuentas y constantes. |
+| `Ram.c` / `Ram.h` | Variables globales (prefijo `g`) e `InitRam`, que las inicializa. |
+| `MainProcess.c` / `MainProcess.h` | Procesos base: `InitClock`, `InitPorts` e `InitMainProcess`. |
+| `[nombre]Driver.c` / `.h` | Un par por cada driver (por ejemplo `PwmDriver`). Todavía no hay ninguno; al agregar uno se suma a `SRCS` en `AirsoftToolSw/CMakeLists.txt`. |
 
 ## Configuración
 
