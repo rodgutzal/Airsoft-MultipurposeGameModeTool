@@ -20,11 +20,20 @@
 
 /* Variables globales. Se definen en Ram.c y se inicializan en InitRam(). */
 
-extern uint8_t  gTeam;                       /* TEAM_RED o TEAM_BLUE */
+extern uint8_t  gTeam;                       /* C_TEAM_RED o C_TEAM_BLUE */
 extern bool     gArmed;                      /* interruptor de llave */
 extern bool     gActionButton;               /* push button de accion */
-extern uint8_t  gKeyPressed;                 /* 0xFF = ninguna tecla */
-extern uint32_t gSystemTickMs;               /* contador de milisegundos */
+extern uint8_t  gKeyPressed;                 /* C_KEY_NONE = ninguna tecla */
+extern volatile uint32_t gSystemTickMs;      /* contador de milisegundos (lo suma la ISR del timer) */
+extern uint32_t gTickOverrunCount;           /* periodos del timer que el ciclo principal no alcanzo a atender */
+extern volatile Union8_t u8MainFlag;     /* banderas del ciclo principal */
+
+/* Nombres de bit de u8MainFlag: cada bf_ es un alias de un bit y se usa como
+ * u8MainFlag.bf_5MsMainLoopFlag.
+ * Regla de escritura: cada bit lo escribe un solo contexto a la vez, porque
+ * modificar un bit es una lectura-modificacion-escritura del byte completo
+ * y no es atomica. */
+#define bf_5MsMainLoopFlag  Bits.Bit0  /* la ISR lo enciende cada C_TIMER_PERIOD_MS */
 
 void InitRam(void);
 

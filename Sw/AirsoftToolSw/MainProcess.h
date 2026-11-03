@@ -14,7 +14,10 @@
 #ifndef MAIN_PROCESS_H
 #define MAIN_PROCESS_H
 
-void ReportCpuClockFrequency(void);
+#include "esp_err.h"
+
+esp_err_t TimerInitialization(void);
+esp_err_t VerifyCpuClockFrequency(void);
 void InitSimpleGpioPorts(void);
 void InitMainProcess(void);
 

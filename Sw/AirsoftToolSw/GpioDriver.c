@@ -29,17 +29,17 @@ static const char *TAG = "GpioDriver";
  */
 static bool IsGpioPinUsable(int pin)
 {
-  if (pin < 0 || pin >= 64)
+  if(pin < 0 || pin >= C_GPIO_PIN_COUNT_MAX)
   {
-    return false;
+    return C_FALSE;
   }
 
-  if (!GPIO_IS_VALID_GPIO(pin))
+  if(GPIO_IS_VALID_GPIO(pin) == C_FALSE)
   {
-    return false;
+    return C_FALSE;
   }
 
-  return (GPIO_RESERVED_MASK & (1ULL << pin)) == 0;
+  return (C_GPIO_RESERVED_MASK & (1ULL << pin)) == 0;
 }
 
 /**
@@ -54,7 +54,7 @@ static bool IsGpioPinUsable(int pin)
  */
 esp_err_t ConfigGpioAsOutput(int pin, int level)
 {
-  if (!IsGpioPinUsable(pin))
+  if(IsGpioPinUsable(pin) == C_FALSE)
   {
     ESP_LOGE(TAG, "GPIO%d no existe o esta reservado", pin);
     return ESP_ERR_INVALID_ARG;
@@ -70,14 +70,14 @@ esp_err_t ConfigGpioAsOutput(int pin, int level)
   };
 
   esp_err_t err = gpio_config(&cfg);
-  if (err != ESP_OK)
+  if(err != ESP_OK)
   {
     ESP_LOGE(TAG, "GPIO%d: fallo al configurar como salida (%s)", pin, esp_err_to_name(err));
     return err;
   }
 
-  err = gpio_set_level((gpio_num_t)pin, (level != 0) ? 1 : 0);
-  if (err != ESP_OK)
+  err = gpio_set_level((gpio_num_t)pin, (level != C_FALSE) ? C_TRUE : C_FALSE);
+  if(err != ESP_OK)
   {
     ESP_LOGE(TAG, "GPIO%d: fallo al fijar el nivel inicial (%s)", pin, esp_err_to_name(err));
   }
@@ -97,7 +97,7 @@ esp_err_t ConfigGpioAsOutput(int pin, int level)
  */
 esp_err_t ConfigGpioAsInput(int pin)
 {
-  if (!IsGpioPinUsable(pin))
+  if(IsGpioPinUsable(pin) == C_FALSE)
   {
     ESP_LOGE(TAG, "GPIO%d no existe o esta reservado", pin);
     return ESP_ERR_INVALID_ARG;
@@ -113,7 +113,7 @@ esp_err_t ConfigGpioAsInput(int pin)
   };
 
   esp_err_t err = gpio_config(&cfg);
-  if (err != ESP_OK)
+  if(err != ESP_OK)
   {
     ESP_LOGE(TAG, "GPIO%d: fallo al configurar como entrada (%s)", pin, esp_err_to_name(err));
   }

@@ -9,5 +9,8 @@ CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_OCT=y
 CONFIG_SPIRAM_SPEED_80M=y
 
-# CPU a 240 MHz
+# CPU a 240 MHz desde el arranque (PLL sobre el cristal de 40 MHz)
 CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+
+# Gestion de energia: necesaria para esp_pm_configure (TimerInitialization)
+CONFIG_PM_ENABLE=y

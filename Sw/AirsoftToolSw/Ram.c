@@ -17,21 +17,27 @@ uint8_t  gTeam;
 bool     gArmed;
 bool     gActionButton;
 uint8_t  gKeyPressed;
-uint32_t gSystemTickMs;
+volatile uint32_t gSystemTickMs;
+uint32_t gTickOverrunCount;
+volatile Union8_t u8MainFlag;
 
 /**
  * Nombre:      InitRam
  * Descripcion: Deja todas las variables globales en su valor inicial: equipo
  *              rojo, bomba sin armar, boton sin pulsar, ninguna tecla
- *              presionada (0xFF) y contador de milisegundos en cero.
+ *              presionada (C_KEY_NONE), contador de milisegundos en cero y
+ *              contador de periodos perdidos del timer en cero y todas las
+ *              banderas del ciclo principal (u8MainFlag) apagadas.
  * Entradas:    Ninguna.
  * Salidas:     Ninguna (modifica las variables globales de Ram.h).
  */
 void InitRam(void)
 {
-  gTeam         = TEAM_RED;
+  gTeam         = C_TEAM_RED;
   gArmed        = false;
   gActionButton = false;
-  gKeyPressed   = 0xFF;
+  gKeyPressed   = C_KEY_NONE;
   gSystemTickMs = 0;
+  gTickOverrunCount = 0;
+  u8MainFlag.Byte   = 0;
 }

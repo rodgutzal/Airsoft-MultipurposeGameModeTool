@@ -15,12 +15,19 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "MainProcess.h"
+#include "TimerDriver.h"
 
 /**
  * Nombre:      app_main
  * Descripcion: Funcion que ESP-IDF llama al terminar el arranque. Inicializa
- *              las variables globales y los procesos base, y luego mantiene
- *              la tarea viva con una espera de un segundo por ciclo.
+ *              las variables globales, los procesos base y el timer
+ *              periodico, y luego ejecuta el ciclo principal: la tarea duerme
+ *              hasta que la interrupcion del timer (cada C_TIMER_PERIOD_MS)
+ *              la despierta. Si la bandera bf_5MsMainLoopFlag de u8MainFlag
+ *              es verdadera, ejecuta las subrutinas del ciclo y al terminar
+ *              apaga la bandera. Si la ISR encuentra la bandera todavia
+ *              encendida (las subrutinas tardaron mas de C_TIMER_PERIOD_MS),
+ *              se cuenta en gTickOverrunCount.
  * Entradas:    Ninguna.
  * Salidas:     Ninguna (no regresa).
  */
@@ -29,8 +36,18 @@ void app_main(void)
   InitRam();
   InitMainProcess();
 
-  while (1)
+  ESP_ERROR_CHECK(ConfigPeriodicTimer(xTaskGetCurrentTaskHandle()));
+  ESP_ERROR_CHECK(StartPeriodicTimer());
+
+  while(C_TRUE)
   {
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+    if(u8MainFlag.bf_5MsMainLoopFlag == C_TRUE)
+    {
+      /* Aqui van las subrutinas del ciclo principal, una vez cada C_TIMER_PERIOD_MS. */
+
+      u8MainFlag.bf_5MsMainLoopFlag = C_FALSE;
+    }
   }
 }
