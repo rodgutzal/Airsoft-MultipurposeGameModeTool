@@ -16,7 +16,7 @@ Las conexiones se hacen por etiqueta de red. Dos etiquetas con el mismo nombre s
 | 41 | LCD_RST | |
 | 42 | LCD_CS | |
 | 11, 12, 13, 14 | KEY_F1 a KEY_F4 | filas del teclado, salidas |
-| 8, 9, 38, 39 | KEY_C1 a KEY_C4 | columnas del teclado, entradas con pull-up |
+| 8, 9, 38, 39 | KEY_C1 a KEY_C4 | columnas del teclado, entradas con pull-up externo (R17 a R20); el firmware no usa pull-ups internos |
 | 21 | SW_EQUIPO | selector de equipo, abierto = rojo |
 | 47 | SW_ARMADO | interruptor de llave de la bomba |
 | 48 | BTN_ACCION | push button (push and hold); comparte línea con el LED RGB de la tarjeta |
@@ -66,16 +66,16 @@ Lista de la opción A. El Excel `lista_materiales_v0.4.xlsx` trae las dos opcion
 | 1 | U4 | Módulo amplificador I2S MAX98357A | 90 (estimado) |
 | 1 | LS1 | Bocina 4 Ω, 3 a 5 W, cono de 40 a 57 mm | 60 (estimado) |
 | 2 | Q1, Q2 | MOSFET N AO3400A (SOT-23); en perfboard sirve 2N7000 TO-92 | 5 |
-| 4 | R1, R2, R3, R4 | 10k | 1 |
+| 8 | R1, R2, R3, R4, R17, R18, R19, R20 | 10k | 1 |
 | 3 | R5, R8, R10 | 100 Ω | 1 |
 | 4 | R6, R9, R13, R14 | 100k | 1 |
 | 1 | R7 | 150 Ω | 1 |
 | 3 | C1, C2, C4 | 100 nF | 2 |
 | 1 | C3 | 470 µF 10 V electrolítico | 8 |
 
-Total aproximado de la opción A: 1,499 MXN por unidad sin gabinete.
+Total aproximado de la opción A: 1,503 MXN por unidad sin gabinete.
 
-La opción B cambia M1 por portapilas (35), TP4056 (35), interruptor de encendido (15), MT3608 (8), L1 (12), C5 y C6 (10), D4 (5), R15 (1) y R16 (1), para un total aproximado de 1,343 MXN.
+La opción B cambia M1 por portapilas (35), TP4056 (35), interruptor de encendido (15), MT3608 (8), L1 (12), C5 y C6 (10), D4 (5), R15 (1) y R16 (1), para un total aproximado de 1,347 MXN.
 
 Precios confirmados para comparar: ESP32 DevKit V1 (WROOM-32) a 199 en Steren y 130 + IVA en Teknomovo; Raspberry Pi Pico 2 W a 208 en 330ohms. El análisis completo de la elección del micro está en el documento del paso 1.
 

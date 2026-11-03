@@ -278,8 +278,10 @@ text("TECLADO 4x4", 228, 104, 2, True)
 place(KEY, "KP1", "Teclado membrana 4x4", 270.0, 127.0,
       {"1": "KEY_F1", "2": "KEY_F2", "3": "KEY_F3", "4": "KEY_F4",
        "5": "KEY_C1", "6": "KEY_C2", "7": "KEY_C3", "8": "KEY_C4"})
-text("Filas como salidas, columnas como entradas con pull-up interno.", 300, 122)
-text("Escaneo por firmware, sin componentes extra.", 300, 125)
+for i, x in enumerate((330.0, 345.0, 360.0, 375.0)):
+    place(R, "R%d" % (17 + i), "10k", x, 138.0, {"1": "+3V3", "2": "KEY_C%d" % (i + 1)})
+text("Filas como salidas, columnas como entradas con pull-up externo (R17 a R20, 10k).", 300, 122)
+text("Escaneo por firmware. El firmware no usa pull-ups internos.", 300, 125)
 
 # ---------------------------------------------------------------- entradas de usuario
 frame(10, 135, 215, 200)
