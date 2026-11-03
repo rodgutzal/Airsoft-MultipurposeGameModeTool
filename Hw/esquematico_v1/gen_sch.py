@@ -251,13 +251,14 @@ mcu_nets = {
     "35": None, "36": "I2S_DIN", "37": "I2S_LRC", "38": "BTN_ACCION", "39": "SW_ARMADO",
     "40": "SW_EQUIPO", "41": None, "42": None, "43": "GND", "44": "GND",
 }
-frame(10, 25, 215, 125)
+frame(10, 25, 215, 128)
 text("MICROCONTROLADOR", 83, 29, 2, True)
 place(MCU, "U1", "ESP32-S3-DevKitC-1 N16R8", 147.32, 76.2, mcu_nets, stub=7.62)
 text("GPIO1 y GPIO2 son ADC1: leen el touch resistivo compartido con LCD_RS y LCD_WR.", 83, 112)
 text("GPIO35-37 los usa la PSRAM octal. GPIO19/20 son el USB nativo. GPIO43/44 quedan para depuracion.", 83, 115)
 text("GPIO0, GPIO45 y GPIO46 son pines de arranque: solo llevan entradas de alta impedancia (DIN, LRC y la compuerta de Q2 con 100k a GND).", 83, 118)
 text("GPIO48 maneja el LED RGB de la tarjeta v1.1: el boton solo lo lee como entrada.", 83, 121)
+text("Toda entrada digital lleva pull-up externo de 10k. GPIO45 no debe llevar pull-up: en alto el arranque fija la flash a 1.8 V.", 83, 124)
 
 # ---------------------------------------------------------------- pantalla
 frame(225, 25, 405, 95)
@@ -278,8 +279,10 @@ text("TECLADO 4x4", 228, 104, 2, True)
 place(KEY, "KP1", "Teclado membrana 4x4", 270.0, 127.0,
       {"1": "KEY_F1", "2": "KEY_F2", "3": "KEY_F3", "4": "KEY_F4",
        "5": "KEY_C1", "6": "KEY_C2", "7": "KEY_C3", "8": "KEY_C4"})
-text("Filas como salidas, columnas como entradas con pull-up interno.", 300, 122)
-text("Escaneo por firmware, sin componentes extra.", 300, 125)
+text("Filas como salidas, columnas como entradas con pull-up externo (R17 a R20).", 290, 106)
+text("El firmware no activa pull-ups internos.", 290, 109)
+for i, (rr, col) in enumerate((("R17", "KEY_C1"), ("R18", "KEY_C2"), ("R19", "KEY_C3"), ("R20", "KEY_C4"))):
+    place(R, rr, "10k", 304.8 + i * 20.32, 130.81, {"1": "+3V3", "2": col})
 
 # ---------------------------------------------------------------- entradas de usuario
 frame(10, 135, 215, 200)
@@ -377,8 +380,8 @@ out = f"""(kicad_sch (version 20230121) (generator eeschema)
   (paper "A3")
   (title_block
     (title "Herramienta multiproposito para airsoft")
-    (date "2026-11-02")
-    (rev "v0.4-{VARIANT}")
+    (date "2026-11-03")
+    (rev "v0.5-{VARIANT}")
     (comment 1 "Esquematico v1: ESP32-S3-DevKitC-1 + TFT 3.5in paralela")
     (comment 2 "Modos: bandera, zona, rey de la colina, bomba, extraccion")
     (comment 4 "{POWER_NOTE}")
