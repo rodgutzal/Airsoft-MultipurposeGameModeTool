@@ -13,6 +13,6 @@ extern bool     gActionButton;               /* push button de accion */
 extern uint8_t  gKeyPressed;                 /* 0xFF = ninguna tecla */
 extern uint32_t gSystemTickMs;               /* contador de milisegundos */
 
-extern void InitRam(void);
+void InitRam(void);
 
 #endif /* RAM_H */
