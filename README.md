@@ -7,13 +7,13 @@ Herramienta multipropósito para partidas de airsoft, con hardware y software pr
 | Carpeta | Contenido |
 | --- | --- |
 | `Hw` | Hardware: esquemático en KiCad, PDF, lista de materiales y asignación de pines. |
-| `Sw` | Software y firmware. Todavía vacío. |
+| `Sw` | Firmware en ESP-IDF. |
 
 ## Estado
 
-Hardware en versión 0.4, en [`Hw/esquematico_v1`](Hw/esquematico_v1/README.md). Usa un ESP32-S3-DevKitC-1 N16R8 con pantalla TFT de 3.5 pulgadas (480x320, bus paralelo de 8 bits y touch resistivo), teclado 4x4, dos switches, un push button, LEDs rojo y azul, y audio por I2S con un amplificador MAX98357A y una bocina de 4 Ω. La alimentación tiene dos opciones y se construye una sola: un módulo LUORNG V8 para dos celdas 18650 (opción A) o TP4056 con MT3608 discretos (opción B).
+Hardware en versión 0.5, en [`Hw/esquematico_v1`](Hw/esquematico_v1/README.md). Usa un ESP32-S3-DevKitC-1 N16R8 con pantalla TFT de 3.5 pulgadas (480x320, bus paralelo de 8 bits y touch resistivo), teclado 4x4, dos switches, un push button, LEDs rojo y azul, y audio por I2S con un amplificador MAX98357A y una bocina de 4 Ω. La alimentación tiene dos opciones y se construye una sola: un módulo LUORNG V8 para dos celdas 18650 (opción A) o TP4056 con MT3608 discretos (opción B). Todas las entradas digitales tienen pull-up externo de 10k.
 
-Software todavía no empieza. Parte de la asignación de pines del hardware.
+El firmware está en `Sw` (ESP-IDF) y parte de la asignación de pines del hardware.
 
 ## Requisitos de diseño
 
