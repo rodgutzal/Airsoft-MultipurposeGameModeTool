@@ -8,7 +8,7 @@ Branch `b#2_ProyectoBaseEspIdf`, 2026-11-02 (sin cambios frente al commit anteri
 
 ```
 ROM (Flash)
-  Partición de app (1 MB)  [████░░░░░░░░░░░░░░░░]  17.9 %   usado 188,016 B   libre 860,560 B
+  Partición de app (1 MB)  [████░░░░░░░░░░░░░░░░]  18.1 %   usado 189,424 B   libre 859,152 B
   Flash total (16 MB)      [░░░░░░░░░░░░░░░░░░░░]   1.1 %   usado 188,016 B   libre ≈ 16.6 MB
 
 RAM interna
@@ -32,4 +32,5 @@ Notas:
 | Fecha | Commit | Flash app (B) | Flash app (%) | DIRAM (B) | DIRAM (%) | Observación |
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-11-02 | `a3b0e4a` | 188,016 | 17.9 | 54,890 | 16.1 | Proyecto base con GlobalDefine, Ram y MainProcess |
-| 2026-11-02 | este commit (sobre `a3b0e4a`) | 188,016 | 17.9 | 54,890 | 16.1 | Formato Allman, headers de archivo y funcion, nombres descriptivos; sin cambio de tamano |
+| 2026-11-02 | `5393c27` | 188,016 | 17.9 | 54,890 | 16.1 | Formato Allman, headers de archivo y funcion, nombres descriptivos; sin cambio de tamano |
+| 2026-11-02 | este commit (sobre `5393c27`) | 189,424 | 18.1 | 54,890 | 16.1 | Driver GpioDriver (validacion de pin, esp_err_t); entradas sin pull interno |

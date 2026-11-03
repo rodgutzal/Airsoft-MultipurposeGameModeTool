@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Archivo:           MainProcess.c
  * Descripcion:       Procesos base del micro: reporte del reloj, inicializacion
  *                    y configuracion de los puertos GPIO simples.
@@ -12,7 +12,6 @@
  */
 
 #include <stdio.h>
-#include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "esp_flash.h"
@@ -21,50 +20,9 @@
 #include "soc/clk_tree_defs.h"
 #include "MainProcess.h"
 #include "GlobalDefine.h"
+#include "GpioDriver.h"
 
 static const char *TAG = "MainProcess";
-
-/**
- * Nombre:      ConfigGpioAsOutput
- * Descripcion: Configura un GPIO como salida sin resistencias internas y le
- *              asigna un nivel inicial.
- * Entradas:    pin   - numero de GPIO.
- *              level - nivel inicial (0 = bajo, 1 = alto).
- * Salidas:     Ninguna.
- */
-static void ConfigGpioAsOutput(int pin, int level)
-{
-  gpio_config_t cfg =
-  {
-    .pin_bit_mask = 1ULL << pin,
-    .mode         = GPIO_MODE_OUTPUT,
-    .pull_up_en   = GPIO_PULLUP_DISABLE,
-    .pull_down_en = GPIO_PULLDOWN_DISABLE,
-    .intr_type    = GPIO_INTR_DISABLE,
-  };
-  gpio_config(&cfg);
-  gpio_set_level(pin, level);
-}
-
-/**
- * Nombre:      ConfigGpioAsInputWithPullUp
- * Descripcion: Configura un GPIO como entrada con resistencia pull-up interna
- *              y sin interrupciones.
- * Entradas:    pin - numero de GPIO.
- * Salidas:     Ninguna.
- */
-static void ConfigGpioAsInputWithPullUp(int pin)
-{
-  gpio_config_t cfg =
-  {
-    .pin_bit_mask = 1ULL << pin,
-    .mode         = GPIO_MODE_INPUT,
-    .pull_up_en   = GPIO_PULLUP_ENABLE,
-    .pull_down_en = GPIO_PULLDOWN_DISABLE,
-    .intr_type    = GPIO_INTR_DISABLE,
-  };
-  gpio_config(&cfg);
-}
 
 /**
  * Nombre:      ReportCpuClockFrequency
@@ -84,31 +42,33 @@ void ReportCpuClockFrequency(void)
  * Nombre:      InitSimpleGpioPorts
  * Descripcion: Configura los puertos simples: LEDs apagados, filas del
  *              teclado en alto, columnas del teclado, switches y push button
- *              como entradas con pull-up. Los pines de LCD, I2S y ADC los
- *              configura su propio driver.
+ *              como entradas sin pull interno (el pull-up es externo). Los
+ *              pines de LCD, I2S y ADC los configura su propio driver. Si
+ *              algun pin no se puede configurar, el firmware aborta con el
+ *              error (ESP_ERROR_CHECK).
  * Entradas:    Ninguna.
  * Salidas:     Ninguna.
  */
 void InitSimpleGpioPorts(void)
 {
   /* LEDs apagados */
-  ConfigGpioAsOutput(PIN_LED_ROJO, 0);
-  ConfigGpioAsOutput(PIN_LED_AZUL, 0);
+  ESP_ERROR_CHECK(ConfigGpioAsOutput(PIN_LED_ROJO, 0));
+  ESP_ERROR_CHECK(ConfigGpioAsOutput(PIN_LED_AZUL, 0));
 
-  /* Filas del teclado en alto, columnas con pull-up */
-  ConfigGpioAsOutput(PIN_KEY_F1, 1);
-  ConfigGpioAsOutput(PIN_KEY_F2, 1);
-  ConfigGpioAsOutput(PIN_KEY_F3, 1);
-  ConfigGpioAsOutput(PIN_KEY_F4, 1);
-  ConfigGpioAsInputWithPullUp(PIN_KEY_C1);
-  ConfigGpioAsInputWithPullUp(PIN_KEY_C2);
-  ConfigGpioAsInputWithPullUp(PIN_KEY_C3);
-  ConfigGpioAsInputWithPullUp(PIN_KEY_C4);
+  /* Filas del teclado en alto, columnas como entradas (pull-up externo) */
+  ESP_ERROR_CHECK(ConfigGpioAsOutput(PIN_KEY_F1, 1));
+  ESP_ERROR_CHECK(ConfigGpioAsOutput(PIN_KEY_F2, 1));
+  ESP_ERROR_CHECK(ConfigGpioAsOutput(PIN_KEY_F3, 1));
+  ESP_ERROR_CHECK(ConfigGpioAsOutput(PIN_KEY_F4, 1));
+  ESP_ERROR_CHECK(ConfigGpioAsInput(PIN_KEY_C1));
+  ESP_ERROR_CHECK(ConfigGpioAsInput(PIN_KEY_C2));
+  ESP_ERROR_CHECK(ConfigGpioAsInput(PIN_KEY_C3));
+  ESP_ERROR_CHECK(ConfigGpioAsInput(PIN_KEY_C4));
 
   /* Switches y push button */
-  ConfigGpioAsInputWithPullUp(PIN_SW_EQUIPO);
-  ConfigGpioAsInputWithPullUp(PIN_SW_ARMADO);
-  ConfigGpioAsInputWithPullUp(PIN_BTN_ACCION);
+  ESP_ERROR_CHECK(ConfigGpioAsInput(PIN_SW_EQUIPO));
+  ESP_ERROR_CHECK(ConfigGpioAsInput(PIN_SW_ARMADO));
+  ESP_ERROR_CHECK(ConfigGpioAsInput(PIN_BTN_ACCION));
 }
 
 /**

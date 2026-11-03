@@ -15,6 +15,7 @@
 #define GLOBAL_DEFINE_H
 
 /* No usar: GPIO19/20 (USB nativo), GPIO26-32 (flash), GPIO35-37 (PSRAM octal). */
+#define GPIO_RESERVED_MASK  ((1ULL << 19) | (1ULL << 20) | (0x7FULL << 26) | (0x7ULL << 35))
 
 /* ---- Pantalla TFT, bus paralelo de 8 bits ---- */
 #define PIN_LCD_RS      1
