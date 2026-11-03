@@ -4,7 +4,7 @@ Se actualiza antes de cada commit que toque `Sw/`, después de compilar y correr
 
 ## Estado actual
 
-Branch `b#2_ProyectoBaseEspIdf`, 2026-11-02.
+Branch `b#2_ProyectoBaseEspIdf`, 2026-11-02 (sin cambios frente al commit anterior).
 
 ```
 ROM (Flash)
@@ -31,4 +31,5 @@ Notas:
 
 | Fecha | Commit | Flash app (B) | Flash app (%) | DIRAM (B) | DIRAM (%) | Observación |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2026-11-02 | posterior a `5523a4e` | 188,016 | 17.9 | 54,890 | 16.1 | Proyecto base con GlobalDefine, Ram y MainProcess |
+| 2026-11-02 | `a3b0e4a` | 188,016 | 17.9 | 54,890 | 16.1 | Proyecto base con GlobalDefine, Ram y MainProcess |
+| 2026-11-02 | este commit (sobre `a3b0e4a`) | 188,016 | 17.9 | 54,890 | 16.1 | Formato Allman, headers de archivo y funcion, nombres descriptivos; sin cambio de tamano |
