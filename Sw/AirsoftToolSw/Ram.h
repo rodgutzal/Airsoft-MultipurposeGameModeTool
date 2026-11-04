@@ -18,6 +18,14 @@
 #include <stdbool.h>
 #include "GlobalDefine.h"
 
+/* Interruptor C_RAM_EXPOSE_GLOBALS.
+ * Ram.h es el header comun: siempre entrega las constantes y los tipos de
+ * GlobalDefine.h. Las variables globales y InitRam() solo se declaran si el
+ * archivo define C_RAM_EXPOSE_GLOBALS antes de incluir Ram.h. Los drivers no lo
+ * definen, asi que si intentan usar una variable global no compila (R1).
+ * Lo definen: main.c, Ram.c y, mientras dure el refactor, TimerDriver.c. */
+#ifdef C_RAM_EXPOSE_GLOBALS
+
 /* Variables globales. Se definen en Ram.c y se inicializan en InitRam(). */
 
 extern uint8_t  gTeam;                       /* C_TEAM_RED o C_TEAM_BLUE */
@@ -26,7 +34,7 @@ extern bool     gActionButton;               /* push button de accion */
 extern uint8_t  gKeyPressed;                 /* C_KEY_NONE = ninguna tecla */
 extern volatile uint32_t gSystemTickMs;      /* contador de milisegundos (lo suma la ISR del timer) */
 extern uint32_t gTickOverrunCount;           /* periodos del timer que el ciclo principal no alcanzo a atender */
-extern volatile Union8_t u8MainFlag;     /* banderas del ciclo principal */
+extern volatile Union8_t u8MainFlag;         /* banderas del ciclo principal */
 
 /* Nombres de bit de u8MainFlag: cada bf_ es un alias de un bit y se usa como
  * u8MainFlag.bf_5MsMainLoopFlag.
@@ -36,5 +44,7 @@ extern volatile Union8_t u8MainFlag;     /* banderas del ciclo principal */
 #define bf_5MsMainLoopFlag  Bits.Bit0  /* la ISR lo enciende cada C_TIMER_PERIOD_MS */
 
 void InitRam(void);
+
+#endif /* C_RAM_EXPOSE_GLOBALS */
 
 #endif /* RAM_H */

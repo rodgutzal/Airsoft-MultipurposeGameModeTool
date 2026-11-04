@@ -16,7 +16,7 @@
 #include "esp_attr.h"
 #include "esp_log.h"
 #include "TimerDriver.h"
-#include "GlobalDefine.h"
+#define C_RAM_EXPOSE_GLOBALS  /* violacion de R1 pendiente: la ISR escribe variables de Ram; se quita en el refactor */
 #include "Ram.h"
 
 static const char *TAG = "TimerDriver";

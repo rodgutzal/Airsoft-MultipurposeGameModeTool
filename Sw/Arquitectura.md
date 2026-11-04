@@ -13,13 +13,14 @@ Documento de diseño (tarea 1). Define las reglas de encapsulamiento, la organiz
 
 | Regla | Enunciado |
 | --- | --- |
-| R1 | Un driver no incluye `Ram.h`. El estado que comparte con el resto se expone con funciones del driver. |
+| R1 | Un driver puede incluir `Ram.h` solo para usar constantes y tipos (`C_*`, uniones); no lee ni escribe las variables de `Ram`. Lo hace cumplir el compilador: `Ram.h` solo declara las variables globales si el archivo define `C_RAM_EXPOSE_GLOBALS` antes de incluirlo, y los drivers no lo definen. El estado que un driver comparte con el resto se expone con funciones del driver. |
 | R2 | Los headers de los drivers no exponen tipos de FreeRTOS ni handles de ESP-IDF; solo tipos simples, tipos de `GlobalDefine.h` y `esp_err_t`. |
 | R3 | El consumidor usa funciones de alto nivel (por ejemplo `TimerConsumeMainTick()`). La bandera, la notificación y la ISR son internas del driver. |
 | R4 | Cada periférico posee sus pines. `MainProcess` solo llama a la inicialización de cada driver y no conoce el pinout. |
 | R5 | Hay una sola secuencia de arranque, en `MainProcess`: reloj, periféricos, timer. `main.c` llama a `InitMainProcess()` y ejecuta el ciclo. |
 | R6 | `Ram` guarda solo el modelo de la aplicación (equipo, armado, tecla, estado del juego). Cada variable tiene un único dueño de escritura. |
 | R7 | Las rutinas de interrupción y los datos que tocan viven dentro del driver; se marcan `IRAM_ATTR` y no llaman funciones bloqueantes. |
+| R8 | Ningún archivo incluye `GlobalDefine.h`: se incluye solo desde `Ram.h`, y el resto de los archivos incluye `Ram.h` como header común de constantes y tipos. Las variables globales solo se ven con `C_RAM_EXPOSE_GLOBALS` (hoy lo definen `main.c`, `Ram.c` y, hasta el refactor, `TimerDriver.c`). |
 
 Se mantienen las reglas de formato del [`README.md`](README.md): constantes `C_*` en `GlobalDefine.h`, uniones `[tamaño][Nombre]` con bits `bf_*`, comparaciones explícitas y headers de archivo y de función.
 
@@ -65,7 +66,7 @@ flowchart TB
   DRV --> IDFAPI
 ```
 
-Reglas de la figura: una flecha hacia abajo es "usa". Ningún driver apunta hacia `Ram` ni hacia la aplicación.
+Reglas de la figura: una flecha hacia abajo es "usa". Ningún driver lee ni escribe variables de `Ram` ni usa la aplicación (puede incluir `Ram.h` solo para constantes y tipos, R1 y R8).
 
 ## 4. Catálogo de drivers
 
@@ -191,7 +192,7 @@ Se deja el diseño preparado sin implementar. El enlace sería **ESP-NOW** (dire
 
 | Hallazgo | Regla | Dónde | PR que lo corrige |
 | --- | --- | --- | --- |
-| La ISR escribe `gSystemTickMs`, `gTickOverrunCount` y `u8MainFlag` de `Ram` | R1 | `TimerDriver.c` | Refactor de encapsulamiento |
+| La ISR escribe `gSystemTickMs`, `gTickOverrunCount` y `u8MainFlag` de `Ram` (`TimerDriver.c` define `C_RAM_EXPOSE_GLOBALS` para poder hacerlo) | R1 | `TimerDriver.c` | Refactor de encapsulamiento |
 | `ConfigPeriodicTimer` recibe un `TaskHandle_t` y el header incluye FreeRTOS | R2 | `TimerDriver.h` | Refactor de encapsulamiento |
 | `main.c` espera la notificación y apaga la bandera | R3 | `main.c` | Refactor de encapsulamiento |
 | El timer se configura y arranca en `main.c`, el resto en `MainProcess` | R5 | `main.c`, `MainProcess.c` | Refactor de encapsulamiento |

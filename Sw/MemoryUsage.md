@@ -4,7 +4,7 @@ Se actualiza antes de cada commit que toque `Sw/`, después de compilar y correr
 
 ## Estado actual
 
-Branch `b#6_ArquitecturaSistema`, 2026-11-03.
+Branch `b#7_RamComoHeaderComun`, 2026-11-04.
 
 ```
 ROM (Flash)
@@ -36,4 +36,5 @@ Notas:
 | 2026-11-02 | `5393c27` | 188,016 | 17.9 | 54,890 | 16.1 | Formato Allman, headers de archivo y funcion, nombres descriptivos; sin cambio de tamano |
 | 2026-11-02 | `fb8cd28` | 189,424 | 18.1 | 54,890 | 16.1 | Driver GpioDriver (validacion de pin, esp_err_t); entradas sin pull interno |
 | 2026-11-03 | `def49dd` | 203,824 | 19.4 | 57,578 | 16.9 | TimerInitialization (reloj 240 MHz con esp_pm), constantes C_, timer periodico de 5 ms con u8MainFlag, uniones, reglas de formato |
-| 2026-11-03 | este commit (sobre `248c9b1`) | 203,840 | 19.4 | 57,578 | 16.9 | ClockDriver (reloj movido fuera de MainProcess); sin cambio de tamano relevante |
+| 2026-11-03 | `6a4793f` | 203,840 | 19.4 | 57,578 | 16.9 | ClockDriver (reloj movido fuera de MainProcess); sin cambio de tamano relevante |
+| 2026-11-04 | este commit (sobre `9890c32`) | 203,840 | 19.4 | 57,578 | 16.9 | Los archivos incluyen Ram.h en lugar de GlobalDefine.h (R8) y interruptor C_RAM_EXPOSE_GLOBALS (R1); sin cambio de tamano |

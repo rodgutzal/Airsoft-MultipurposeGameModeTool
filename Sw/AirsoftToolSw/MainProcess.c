@@ -17,7 +17,7 @@
 #include "esp_flash.h"
 #include "esp_chip_info.h"
 #include "MainProcess.h"
-#include "GlobalDefine.h"
+#include "Ram.h"
 #include "ClockDriver.h"
 #include "GpioDriver.h"
 
