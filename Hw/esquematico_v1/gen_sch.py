@@ -234,6 +234,13 @@ CHG = use_box("TP4056_USB-C_con_proteccion", "U",
               [("1", "IN+"), ("2", "IN-")],
               [("3", "B+"), ("4", "B-"), ("5", "OUT+"), ("6", "OUT-")],
               width=20.32, desc="Modulo cargador TP4056 + DW01 + FS8205")
+BUF = use_box("74AHCT125", "U",
+              [("1", "1OE"), ("2", "1A"), ("3", "1Y"), ("4", "2OE"), ("5", "2A"), ("6", "2Y"), ("7", "GND")],
+              [("14", "VCC"), ("13", "4OE"), ("12", "4A"), ("11", "4Y"), ("10", "3OE"), ("9", "3A"), ("8", "3Y")],
+              width=15.24, desc="Cuatro buffers con entrada TTL (VIH 2 V) alimentados a 5 V, DIP-14 (SN74AHCT125N)")
+TIRA = use_box("Tira_WS2812B", "DS",
+               [("1", "+5V"), ("2", "DIN"), ("3", "GND")], [("4", "DOUT")],
+               width=15.24, desc="Tira LED RGB direccionable WS2812B 5 V")
 AMP = use_box("MAX98357A_I2S_3W", "U",
               [("1", "VIN"), ("2", "GND"), ("3", "SD"), ("4", "GAIN"), ("5", "DIN"), ("6", "BCLK"), ("7", "LRC")],
               [("8", "OUT+"), ("9", "OUT-")],
@@ -243,7 +250,7 @@ AMP = use_box("MAX98357A_I2S_3W", "U",
 mcu_nets = {
     "1": "+3V3", "2": "+3V3", "3": None,
     "4": "LCD_D0", "5": "LCD_D1", "6": "LCD_D2", "7": "LCD_D3", "8": "LCD_D4", "9": "LCD_D5",
-    "10": "LCD_D6", "11": "LCD_D7", "12": "KEY_C1", "13": "LED_ROJO", "14": "LED_AZUL",
+    "10": "LCD_D6", "11": "LCD_D7", "12": "KEY_C1", "13": "LED_TIRA1", "14": "LED_TIRA2",
     "15": "KEY_C2", "16": "VBAT_ADC", "17": "KEY_F1", "18": "KEY_F2", "19": "KEY_F3",
     "20": "KEY_F4", "21": "+5V", "22": "GND",
     "23": "GND", "24": None, "25": None, "26": "LCD_RS", "27": "LCD_WR", "28": "LCD_CS",
@@ -254,9 +261,13 @@ mcu_nets = {
 frame(10, 25, 215, 128)
 text("MICROCONTROLADOR", 83, 29, 2, True)
 place(MCU, "U1", "ESP32-S3-DevKitC-1 N16R8", 147.32, 76.2, mcu_nets, stub=7.62)
+place(R, "R6", "100k", 27.94, 76.2, {"1": "LED_TIRA1", "2": "GND"})
+place(R, "R9", "100k", 45.72, 76.2, {"1": "LED_TIRA2", "2": "GND"})
+text("Pull-downs de los datos", 15, 92)
+text("de las tiras LED.", 15, 95)
 text("GPIO1 y GPIO2 son ADC1: leen el touch resistivo compartido con LCD_RS y LCD_WR.", 83, 112)
 text("GPIO35-37 los usa la PSRAM octal. GPIO19/20 son el USB nativo. GPIO43/44 quedan para depuracion.", 83, 115)
-text("GPIO0, GPIO45 y GPIO46 son pines de arranque: solo llevan entradas de alta impedancia (DIN, LRC y la compuerta de Q2 con 100k a GND).", 83, 118)
+text("GPIO0, GPIO45 y GPIO46 son pines de arranque: solo llevan entradas de alta impedancia (DIN, LRC y la entrada de U5 con 100k a GND).", 83, 118)
 text("GPIO48 maneja el LED RGB de la tarjeta v1.1: el boton solo lo lee como entrada.", 83, 121)
 text("Toda entrada digital lleva pull-up externo de 10k. GPIO45 no debe llevar pull-up: en alto el arranque fija la flash a 1.8 V.", 83, 124)
 
@@ -299,25 +310,27 @@ text("Pull-ups externos de 10k por los cables largos en campo. C1 filtra el rebo
 text("Switch cerrado = nivel bajo. SW1 abierto = equipo rojo, cerrado = equipo azul.", 13, 195)
 
 # ---------------------------------------------------------------- salidas
-frame(225, 155, 405, 250)
-text("SALIDAS: LEDS DE EQUIPO Y AUDIO", 228, 159, 2, True)
-def canal_led(x0, y, color, rr, rg, rp, q, d, rl, r_led):
-    n = "LED_" + color
-    place(R, rg, "100", x0, y, {"1": n, "2": q + "_G"})
-    place(R, rp, "100k", x0 + 15.24, y, {"1": q + "_G", "2": "GND"})
-    place(Q, q, "AO3400A", x0 + 40.64, y, {"1": q + "_G", "2": "GND", "3": n + "_K"})
-    place(LED, d, color.capitalize() + " 10mm", x0 + 55.88, y, {"1": n + "_K", "2": n + "_A"}, rot=270)
-    place(R, rl, r_led, x0 + 73.66, y, {"1": "+5V", "2": n + "_A"})
-canal_led(238.76, 190.5, "ROJO", None, "R5", "R6", "Q1", "D1", "R7", "150")
-canal_led(322.58, 190.5, "AZUL", None, "R8", "R9", "Q2", "D2", "R10", "100")
-place(AMP, "U4", "MAX98357A I2S", 270.0, 229.0,
+frame(225, 155, 405, 253)
+text("SALIDAS: TIRAS LED RGB Y AUDIO", 228, 159, 2, True)
+place(BUF, "U5", "74AHCT125", 262.89, 180.34,
+      {"1": "GND", "2": "LED_TIRA1", "3": "TIRA1_5V", "4": "GND", "5": "LED_TIRA2", "6": "TIRA2_5V",
+       "7": "GND", "8": None, "9": "GND", "10": "GND", "11": None, "12": "GND", "13": "GND", "14": "+5V"})
+place(R, "R5", "330", 309.88, 172.72, {"1": "TIRA1_5V", "2": "TIRA1_DIN"}, rot=90, ref_at=(0, -2.54, 1), val_at=(0, 2.54, 1))
+place(R, "R8", "330", 309.88, 193.04, {"1": "TIRA2_5V", "2": "TIRA2_DIN"}, rot=90, ref_at=(0, -2.54, 1), val_at=(0, 2.54, 1))
+place(TIRA, "DS2", "Tira WS2812B 15 LEDs", 360.68, 172.72, {"1": "+5V", "2": "TIRA1_DIN", "3": "GND", "4": None})
+place(TIRA, "DS3", "Tira WS2812B 15 LEDs", 360.68, 193.04, {"1": "+5V", "2": "TIRA2_DIN", "3": "GND", "4": None})
+place(CP, "C8", "1000uF", 377.19, 182.88, {"1": "+5V", "2": "GND"})
+place(C, "C7", "100nF", 392.43, 182.88, {"1": "+5V", "2": "GND"})
+text("Tiras direccionables WS2812B de 5 V, una por linea de datos (RMT del ESP32-S3). U5 sube los datos de 3.3 V a 5 V. C7 junto a U5.", 228, 207)
+text("R5/R8 de 330 ohm junto a la entrada DIN de cada tira. C8 junto a las tiras. R6/R9 (bloque del micro) mantienen los datos en bajo en el arranque.", 228, 210)
+text("Supuesto: 15 LEDs por tira (25 cm de tira de 60 LEDs/m). Hasta 0.9 A por tira en blanco; el firmware limita las dos a 600 mA en total.", 228, 213)
+place(AMP, "U4", "MAX98357A I2S", 262.89, 232.41,
       {"1": "+5V", "2": "GND", "3": "+3V3", "4": None, "5": "I2S_DIN", "6": "I2S_BCLK", "7": "I2S_LRC",
        "8": "SPK_P", "9": "SPK_N"})
-place(SPK, "LS1", "Bocina 4 ohm 3-5 W", 322.58, 229.0, {"1": "SPK_P", "2": "SPK_N"},
+place(SPK, "LS1", "Bocina 4 ohm 3-5 W", 315.0, 232.41, {"1": "SPK_P", "2": "SPK_N"},
       ref_at=(2.54, -6.35, 1), val_at=(2.54, 8.89, 1))
-place(CP, "C3", "470uF 10V", 356.0, 229.0, {"1": "+5V", "2": "GND"})
-place(C, "C4", "100nF", 372.0, 229.0, {"1": "+5V", "2": "GND"})
-text("LEDs a 5 V con MOSFET, unos 20 mA cada uno. Indican equipo activo y parpadean como contador en el modo bomba.", 228, 246)
+place(CP, "C3", "470uF 10V", 348.0, 232.41, {"1": "+5V", "2": "GND"})
+place(C, "C4", "100nF", 364.0, 232.41, {"1": "+5V", "2": "GND"})
 text("Audio: MAX98357A por I2S, 3.2 W en 4 ohm a 5 V. SD a 3V3 mezcla L+R, GAIN abierto = 9 dB. C3 y C4 junto al modulo.", 228, 249)
 
 # ---------------------------------------------------------------- alimentación
@@ -344,8 +357,8 @@ if VARIANT == "B":
     text("Carga por el USB-C del TP4056 (IN+/IN- son su conector).", 13, 252)
     text("D4 es el diodo del elevador y bloquea el retorno del USB del DevKit.", 13, 255)
     text("R13/R14: 4.2 V de bateria -> 2.1 V en GPIO10 (ADC1).", 13, 258)
-    text("Consumo estimado ~400 mA de bateria. 2 x 3000 mAh", 13, 263)
-    text("nominales dan unas 10 h, el doble de las 5 h pedidas.", 13, 266)
+    text("Consumo estimado ~0.9 A de bateria con tiras al 50%:", 13, 263)
+    text("unas 6.8 h nominales. Limitar tiras a 300 mA (MT3608).", 13, 266)
     text("MT3608: Vout = 0.6 V x (1 + R15/R16) = 5.2 V en el riel, con FB despues de D4.", 13, 271)
     text("EN a VIN. L1 con corriente de saturacion de 3 A o mas.", 13, 274)
     text("OPCION B: diseno discreto con TP4056, interruptor y MT3608 (alternativa a la opcion A).", 13, 280)
@@ -365,7 +378,7 @@ else:
     text("BAT+ y BAT-: contactos del portapilas, de ahi sale la medicion. BAT- y GND son comunes en el modulo (por confirmar).", 13, 258)
     text("R13/R14: 4.2 V de bateria -> 2.1 V en GPIO10 (ADC1).", 13, 262)
     text("Dejar el interruptor de modo del modulo en encendido continuo: en modo automatico se apaga con poca carga.", 13, 266)
-    text("Consumo estimado ~400 mA de bateria. 2 x 3000 mAh nominales dan unas 10 h, el doble de las 5 h pedidas.", 13, 270)
+    text("Consumo estimado ~0.9 A de bateria con las tiras en un color al 50%: unas 6.8 h nominales con 2 x 3000 mAh.", 13, 270)
     text("Pendiente: confirmar si el DevKit tiene diodo entre su USB y el pin 5V. Si no, no conectar USB con M1 encendido.", 13, 274)
 
 # ---------------------------------------------------------------- notas
@@ -380,8 +393,8 @@ out = f"""(kicad_sch (version 20230121) (generator eeschema)
   (paper "A3")
   (title_block
     (title "Herramienta multiproposito para airsoft")
-    (date "2026-11-03")
-    (rev "v0.5-{VARIANT}")
+    (date "2026-11-04")
+    (rev "v0.6-{VARIANT}")
     (comment 1 "Esquematico v1: ESP32-S3-DevKitC-1 + TFT 3.5in paralela")
     (comment 2 "Modos: bandera, zona, rey de la colina, bomba, extraccion")
     (comment 4 "{POWER_NOTE}")

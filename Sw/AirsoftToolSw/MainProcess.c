@@ -106,7 +106,8 @@ esp_err_t VerifyCpuClockFrequency(void)
 
 /**
  * Nombre:      InitSimpleGpioPorts
- * Descripcion: Configura los puertos simples: LEDs apagados, filas del
+ * Descripcion: Configura los puertos simples: datos de las tiras LED en
+ *              bajo (hasta que exista el driver RMT), filas del
  *              teclado en alto, columnas del teclado, switches y push button
  *              como entradas sin pull interno (el pull-up es externo). Los
  *              pines de LCD, I2S y ADC los configura su propio driver. Si
@@ -117,9 +118,9 @@ esp_err_t VerifyCpuClockFrequency(void)
  */
 void InitSimpleGpioPorts(void)
 {
-  /* LEDs apagados */
-  ESP_ERROR_CHECK(ConfigGpioAsOutput(C_PIN_LED_ROJO, 0));
-  ESP_ERROR_CHECK(ConfigGpioAsOutput(C_PIN_LED_AZUL, 0));
+  /* Datos de las tiras LED en bajo */
+  ESP_ERROR_CHECK(ConfigGpioAsOutput(C_PIN_TIRA_LED_1, 0));
+  ESP_ERROR_CHECK(ConfigGpioAsOutput(C_PIN_TIRA_LED_2, 0));
 
   /* Filas del teclado en alto, columnas como entradas (pull-up externo) */
   ESP_ERROR_CHECK(ConfigGpioAsOutput(C_PIN_KEY_F1, 1));
