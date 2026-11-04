@@ -51,9 +51,9 @@
 #define C_PIN_SW_ARMADO   47  /* interruptor de llave */
 #define C_PIN_BTN_ACCION  48  /* comparte linea con el LED RGB de la tarjeta */
 
-/* ---- LEDs ---- */
-#define C_PIN_LED_ROJO    3   /* pin de arranque */
-#define C_PIN_LED_AZUL    46  /* pin de arranque, pull-down de 100k */
+/* ---- Tiras LED RGB WS2812B (datos via 74AHCT125) ---- */
+#define C_PIN_TIRA_LED_1  3   /* pin de arranque, pull-down de 100k (R6) */
+#define C_PIN_TIRA_LED_2  46  /* pin de arranque, pull-down de 100k (R9) */
 
 /* ---- Audio I2S (MAX98357A) ---- */
 #define C_PIN_I2S_BCLK    40
