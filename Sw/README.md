@@ -247,7 +247,7 @@ La bandera es un bit de un byte, y modificarlo es una lectura-modificación-escr
 - CPU a 240 MHz (PLL sobre el cristal de 40 MHz; el oscilador interno RC_FAST de unos 17.5 MHz no se usa como fuente del CPU);
 - `CONFIG_PM_ENABLE`, necesario para `esp_pm_configure` en `ConfigCpuClock`.
 
-El `sdkconfig` generado no se versiona.
+El `sdkconfig` generado no se versiona. Los archivos generados del firmware (`build/`, `sdkconfig`, `sdkconfig.old`, `managed_components/`, `dependencies.lock`, `.cache/` y `.clangd`) están en `Sw/.gitignore`; la configuración local de editor, Python, KiCad, Excel y el sistema operativo está en el `.gitignore` de la raíz.
 
 ## Reglas de formato del código
 
