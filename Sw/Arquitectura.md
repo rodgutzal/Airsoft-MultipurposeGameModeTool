@@ -20,7 +20,7 @@ Documento de diseño (tarea 1). Define las reglas de encapsulamiento, la organiz
 | R5 | Hay una sola secuencia de arranque, en `MainProcess`: reloj, periféricos, timer. `main.c` llama a `InitMainProcess()` y ejecuta el ciclo. |
 | R6 | `Ram` guarda solo el modelo de la aplicación (equipo, armado, tecla, estado del juego). Cada variable tiene un único dueño de escritura. |
 | R7 | Las rutinas de interrupción y los datos que tocan viven dentro del driver; se marcan `IRAM_ATTR` y no llaman funciones bloqueantes. |
-| R8 | Ningún archivo incluye `GlobalDefine.h`: se incluye solo desde `Ram.h`, y el resto de los archivos incluye `Ram.h` como header común de constantes y tipos. Las variables globales solo se ven con `C_RAM_EXPOSE_GLOBALS` (hoy lo definen `main.c`, `Ram.c` y, hasta el refactor, `TimerDriver.c`). |
+| R8 | Ningún archivo incluye `GlobalDefine.h`: se incluye solo desde `Ram.h`, y el resto de los archivos incluye `Ram.h` como header común de constantes y tipos. Las variables globales solo se ven con `C_RAM_EXPOSE_GLOBALS` (hoy lo definen solo `main.c` y `Ram.c`). |
 
 Se mantienen las reglas de formato del [`README.md`](README.md): constantes `C_*` en `GlobalDefine.h`, uniones `[tamaño][Nombre]` con bits `bf_*`, comparaciones explícitas y headers de archivo y de función.
 
@@ -74,7 +74,7 @@ Reglas de la figura: una flecha hacia abajo es "usa". Ningún driver lee ni escr
 | --- | --- | --- | --- |
 | `ClockDriver` | Reloj del CPU a 240 MHz | `esp_pm`, `esp_clk_tree` | Hecho (esta rama) |
 | `GpioDriver` | Pines de entrada y salida | `esp_driver_gpio` | Hecho |
-| `TimerDriver` | Interrupción periódica de 5 ms | `esp_driver_gptimer` | Hecho; requiere refactor (R1 a R3) |
+| `TimerDriver` | Interrupción periódica de 5 ms | `esp_driver_gptimer` | Hecho; cumple R1 a R3 |
 | `FlashDriver` | Configuración y estadísticas en flash | `nvs_flash` / particiones | Pendiente |
 | `WatchdogDriver` | Watchdog de tareas y de interrupciones | `esp_task_wdt` | Pendiente |
 | `DmaDriver` | Buffers aptos para DMA, copia asíncrona y cola de transferencias | `heap_caps`, `esp_async_memcpy` | Pendiente |
@@ -121,18 +121,19 @@ sequenceDiagram
   D-->>UI: región lista
 ```
 
-## 6. Contrato objetivo de `TimerDriver`
+## 6. Contrato de `TimerDriver`
 
-Hoy el consumidor pasa un `TaskHandle_t`, espera con `ulTaskNotifyTake`, lee y apaga una bandera de `Ram`. El objetivo es que el consumidor solo llame:
+Implementado en el PR de refactor de encapsulamiento. Antes el consumidor pasaba un `TaskHandle_t`, esperaba con `ulTaskNotifyTake` y leía y apagaba una bandera de `Ram`. Ahora solo llama:
 
 | Función | Qué hace |
 | --- | --- |
 | `TimerInit()` / `TimerStart()` | Configura y arranca el periodo de 5 ms. |
-| `TimerWaitMainTick()` | Bloquea hasta el siguiente periodo (la espera es interna). |
+| `TimerWaitMainTick()` | Bloquea hasta el siguiente periodo (la espera es interna) y regresa sin apagar la bandera. |
+| `TimerEndMainTick()` | Marca el periodo como atendido. Se llama al terminar el trabajo del periodo, para que el timer detecte si tardó más de 5 ms. |
 | `TimerGetSystemTickMs()` | Milisegundos desde el arranque. |
 | `TimerGetOverrunCount()` | Periodos que el ciclo no alcanzó a atender. |
 
-La bandera `bf_5MsMainLoopFlag`, la notificación y la ISR pasan a ser privadas del driver. Cuando el ciclo principal se mueva a su propia tarea, esa tarea es la única que llama a `TimerWaitMainTick()`.
+La bandera `u8MainFlag` (bit `bf_5MsMainLoopFlag`), la notificación, los contadores y la ISR son privados del driver (variables `static` en `TimerDriver.c`). La tarea que llama a `TimerWaitMainTick()` queda registrada para que la ISR la despierte; cuando el ciclo principal se mueva a su propia tarea, esa tarea es la única que la llama.
 
 ## 7. Tareas, núcleos y prioridades
 
@@ -192,12 +193,12 @@ Se deja el diseño preparado sin implementar. El enlace sería **ESP-NOW** (dire
 
 | Hallazgo | Regla | Dónde | PR que lo corrige |
 | --- | --- | --- | --- |
-| La ISR escribe `gSystemTickMs`, `gTickOverrunCount` y `u8MainFlag` de `Ram` (`TimerDriver.c` define `C_RAM_EXPOSE_GLOBALS` para poder hacerlo) | R1 | `TimerDriver.c` | Refactor de encapsulamiento |
-| `ConfigPeriodicTimer` recibe un `TaskHandle_t` y el header incluye FreeRTOS | R2 | `TimerDriver.h` | Refactor de encapsulamiento |
-| `main.c` espera la notificación y apaga la bandera | R3 | `main.c` | Refactor de encapsulamiento |
-| El timer se configura y arranca en `main.c`, el resto en `MainProcess` | R5 | `main.c`, `MainProcess.c` | Refactor de encapsulamiento |
+| La ISR escribía `gSystemTickMs`, `gTickOverrunCount` y `u8MainFlag` de `Ram` | R1 | `TimerDriver.c` | Hecho: son privados del driver |
+| `ConfigPeriodicTimer` recibía un `TaskHandle_t` y el header incluía FreeRTOS | R2 | `TimerDriver.h` | Hecho: `TimerDriver.h` no expone FreeRTOS |
+| `main.c` esperaba la notificación y apagaba la bandera | R3 | `main.c` | Hecho: usa `TimerWaitMainTick` y `TimerEndMainTick` |
+| El timer se configuraba y arrancaba en `main.c`, el resto en `MainProcess` | R5 | `main.c`, `MainProcess.c` | Hecho: `InitMainProcess` hace toda la secuencia |
 | `InitSimpleGpioPorts` conoce el pinout de teclado, switches, botón y tiras | R4 | `MainProcess.c` | Un driver por periférico |
-| Las variables de `Ram` son escribibles desde cualquier módulo | R6 | `Ram.h` | Refactor de encapsulamiento |
+| Las variables de `Ram` no tienen aún un único responsable de escritura (quedan solo las del modelo de la aplicación; el responsable previsto está anotado en `Ram.h`) | R6 | `Ram.h` | Se cumple al crear `InputDriver` y `KeypadDriver` |
 | El reloj estaba dentro de `MainProcess` con el nombre `TimerInitialization` | R4 | `MainProcess.c` | Hecho: `ClockDriver` |
 
 ## 11. Plan de la tarea 2: un driver por PR
@@ -206,7 +207,7 @@ Cada PR parte de `develop` actualizado, lleva su propia branch y actualiza `READ
 
 | Orden | PR | Contenido |
 | --- | --- | --- |
-| 0 | Refactor de encapsulamiento | `TimerDriver` según el punto 6, secuencia de arranque única, `Ram` con un dueño por variable. |
+| 0 | Refactor de encapsulamiento (hecho) | `TimerDriver` según el punto 6, secuencia de arranque única en `InitMainProcess`, `Ram` reducida al modelo de la aplicación con su responsable de escritura previsto. |
 | 1 | `FlashDriver` | Escritura en flash (NVS) y tabla de particiones propia. |
 | 2 | `WatchdogDriver` | Watchdog de tareas y de interrupciones. |
 | 3 | `DmaDriver` | Buffers aptos para DMA, copia asíncrona y cola, según el punto 5. |

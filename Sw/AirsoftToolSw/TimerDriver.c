@@ -2,7 +2,9 @@
  * Archivo:           TimerDriver.c
  * Descripcion:       Driver del timer periodico de hardware (GPTimer) que genera
  *                    la interrupcion de C_TIMER_PERIOD_MS (5 ms) con la que
- *                    avanza el ciclo principal.
+ *                    avanza el ciclo principal. El consumidor solo espera el
+ *                    periodo y consulta los contadores; la bandera, la
+ *                    notificacion y la interrupcion son internas del driver.
  * Fecha de creacion: 2026-11-02
  * Microcontrolador:  ESP32-S3 (modulo ESP32-S3-WROOM-1 N16R8, placa DevKitC-1)
  * Compilador:        xtensa-esp-elf-gcc 15.2.0 (esp-15.2.0_20251204)
@@ -15,27 +17,38 @@
 #include "driver/gptimer.h"
 #include "esp_attr.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "TimerDriver.h"
-#define C_RAM_EXPOSE_GLOBALS  /* violacion de R1 pendiente: la ISR escribe variables de Ram; se quita en el refactor */
 #include "Ram.h"
 
 static const char *TAG = "TimerDriver";
 
+/* Banderas internas del driver. Regla de escritura: cada bit lo escribe un solo
+ * contexto a la vez (la ISR lo enciende solo cuando esta apagado y
+ * TimerEndMainTick lo apaga solo cuando esta encendido), porque modificar un
+ * bit es una lectura-modificacion-escritura del byte completo y no es atomica. */
+#define bf_5MsMainLoopFlag  Bits.Bit0  /* la ISR lo enciende cada C_TIMER_PERIOD_MS */
+
+static volatile Union8_t u8MainFlag;
+static volatile uint32_t sSystemTickMs = 0;
+static volatile uint32_t sTickOverrunCount = 0;
+static volatile TaskHandle_t sWaitingTask = NULL;
 static gptimer_handle_t sPeriodicTimer = NULL;
-static TaskHandle_t sTaskToWake = NULL;
 
 /**
  * Nombre:      PeriodicTimerAlarmIsr
  * Descripcion: Rutina de interrupcion del timer. Se ejecuta cada
- *              C_TIMER_PERIOD_MS: suma ese periodo al contador global
- *              gSystemTickMs y enciende la bandera bf_5MsMainLoopFlag de
- *              u8MainFlag. Si la bandera todavia estaba encendida, el ciclo
- *              principal no termino el periodo anterior y se suma uno a
- *              gTickOverrunCount. Despierta la tarea del ciclo principal con
- *              una notificacion. Corre en IRAM y no usa funciones bloqueantes.
- * Entradas:    timer    - handle del timer que disparo la alarma.
+ *              C_TIMER_PERIOD_MS: suma ese periodo al contador de milisegundos
+ *              y enciende la bandera bf_5MsMainLoopFlag de u8MainFlag. Si la
+ *              bandera todavia estaba encendida, el consumidor no termino el
+ *              periodo anterior y se suma uno al contador de periodos
+ *              perdidos. Despierta con una notificacion a la tarea que espera
+ *              en TimerWaitMainTick, si hay una. Corre en IRAM y no usa
+ *              funciones bloqueantes.
+ * Entradas:    timer     - handle del timer que disparo la alarma.
  *              eventData - datos de la alarma (no se usan).
- *              userData - dato del usuario (no se usa).
+ *              userData  - dato del usuario (no se usa).
  * Salidas:     true si hay que ceder el procesador a una tarea de mayor
  *              prioridad al salir de la interrupcion, false en otro caso.
  */
@@ -44,43 +57,44 @@ static bool IRAM_ATTR PeriodicTimerAlarmIsr(gptimer_handle_t timer,
                                             void *userData)
 {
   BaseType_t higherPriorityTaskWoken = pdFALSE;
+  TaskHandle_t waitingTask = sWaitingTask;
 
-  gSystemTickMs += C_TIMER_PERIOD_MS;
+  sSystemTickMs += C_TIMER_PERIOD_MS;
 
   if(u8MainFlag.bf_5MsMainLoopFlag == C_TRUE)
   {
-    gTickOverrunCount++;
+    sTickOverrunCount++;
   }
   else
   {
     u8MainFlag.bf_5MsMainLoopFlag = C_TRUE;
   }
 
-  vTaskNotifyGiveFromISR(sTaskToWake, &higherPriorityTaskWoken);
+  if(waitingTask != NULL)
+  {
+    vTaskNotifyGiveFromISR(waitingTask, &higherPriorityTaskWoken);
+  }
 
   return (higherPriorityTaskWoken == pdTRUE);
 }
 
 /**
- * Nombre:      ConfigPeriodicTimer
+ * Nombre:      TimerInit
  * Descripcion: Crea y configura el GPTimer a C_TIMER_RESOLUTION_HZ (1 us por
  *              cuenta), con alarma cada C_TIMER_PERIOD_MS en recarga
- *              automatica, y registra la rutina de interrupcion. No arranca
- *              el timer; para eso se llama a StartPeriodicTimer.
- * Entradas:    taskToWake - tarea que la interrupcion despierta en cada
- *                           periodo (normalmente la del ciclo principal).
+ *              automatica, y registra la rutina de interrupcion. Deja en cero
+ *              la bandera y los contadores. No arranca el timer; para eso se
+ *              llama a TimerStart.
+ * Entradas:    Ninguna.
  * Salidas:     ESP_OK si se configuro bien.
- *              ESP_ERR_INVALID_ARG si taskToWake es NULL.
  *              Otro codigo de esp_err_t si el driver de ESP-IDF falla.
  */
-esp_err_t ConfigPeriodicTimer(TaskHandle_t taskToWake)
+esp_err_t TimerInit(void)
 {
-  if(taskToWake == NULL)
-  {
-    ESP_LOGE(TAG, "taskToWake es NULL");
-    return ESP_ERR_INVALID_ARG;
-  }
-  sTaskToWake = taskToWake;
+  u8MainFlag.Byte = 0;
+  sSystemTickMs = 0;
+  sTickOverrunCount = 0;
+  sWaitingTask = NULL;
 
   gptimer_config_t timerConfig =
   {
@@ -131,16 +145,16 @@ esp_err_t ConfigPeriodicTimer(TaskHandle_t taskToWake)
 }
 
 /**
- * Nombre:      StartPeriodicTimer
+ * Nombre:      TimerStart
  * Descripcion: Arranca el timer periodico. A partir de aqui la interrupcion se
  *              dispara cada C_TIMER_PERIOD_MS. Requiere haber llamado antes a
- *              ConfigPeriodicTimer.
+ *              TimerInit.
  * Entradas:    Ninguna.
  * Salidas:     ESP_OK si arranco bien.
  *              ESP_ERR_INVALID_STATE si el timer no esta configurado.
  *              Otro codigo de esp_err_t si el driver de ESP-IDF falla.
  */
-esp_err_t StartPeriodicTimer(void)
+esp_err_t TimerStart(void)
 {
   if(sPeriodicTimer == NULL)
   {
@@ -155,4 +169,66 @@ esp_err_t StartPeriodicTimer(void)
   }
 
   return err;
+}
+
+/**
+ * Nombre:      TimerWaitMainTick
+ * Descripcion: Bloquea a la tarea que la llama hasta que empieza un nuevo
+ *              periodo del timer (la bandera bf_5MsMainLoopFlag esta
+ *              encendida) y regresa sin apagarla. Mientras espera la tarea
+ *              duerme y no consume CPU. Si el periodo ya habia empezado,
+ *              regresa de inmediato. La tarea que llama queda registrada para
+ *              que la ISR la despierte. Al terminar el trabajo del periodo se
+ *              debe llamar a TimerEndMainTick.
+ * Entradas:    Ninguna.
+ * Salidas:     Ninguna.
+ */
+void TimerWaitMainTick(void)
+{
+  sWaitingTask = xTaskGetCurrentTaskHandle();
+
+  while(u8MainFlag.bf_5MsMainLoopFlag == C_FALSE)
+  {
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+  }
+}
+
+/**
+ * Nombre:      TimerEndMainTick
+ * Descripcion: Marca el periodo actual como atendido: apaga la bandera
+ *              bf_5MsMainLoopFlag. Debe llamarse al terminar el trabajo del
+ *              periodo; si el trabajo tarda mas de C_TIMER_PERIOD_MS, la
+ *              siguiente interrupcion encuentra la bandera encendida y suma
+ *              un periodo perdido (TimerGetOverrunCount).
+ * Entradas:    Ninguna.
+ * Salidas:     Ninguna.
+ */
+void TimerEndMainTick(void)
+{
+  u8MainFlag.bf_5MsMainLoopFlag = C_FALSE;
+}
+
+/**
+ * Nombre:      TimerGetSystemTickMs
+ * Descripcion: Devuelve los milisegundos transcurridos desde TimerInit, en
+ *              pasos de C_TIMER_PERIOD_MS. Se desborda a los 49.7 dias.
+ * Entradas:    Ninguna.
+ * Salidas:     Milisegundos desde el arranque del timer.
+ */
+uint32_t TimerGetSystemTickMs(void)
+{
+  return sSystemTickMs;
+}
+
+/**
+ * Nombre:      TimerGetOverrunCount
+ * Descripcion: Devuelve cuantos periodos del timer encontraron la bandera
+ *              todavia encendida, es decir, cuantas veces el trabajo del
+ *              ciclo principal tardo mas de C_TIMER_PERIOD_MS.
+ * Entradas:    Ninguna.
+ * Salidas:     Numero de periodos perdidos desde TimerInit.
+ */
+uint32_t TimerGetOverrunCount(void)
+{
+  return sTickOverrunCount;
 }

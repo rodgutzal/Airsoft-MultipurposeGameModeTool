@@ -28,7 +28,7 @@ flowchart TB
   MAIN --> RAM
   MAIN --> DRV
   MP --> DRV
-  DRV -. "escribe (viola R1)" .-> RAM
+  DRV -. "solo constantes y tipos" .-> RAM
   MP --> RAM
   RAM --> GD
   DRV --> PM
@@ -40,12 +40,12 @@ flowchart TB
   PM --> HW
 ```
 
-El código actual **todavía no cumple** la regla de capas en un punto: la ISR de `TimerDriver` escribe variables de `Ram` (flecha punteada). Está registrado en [`Arquitectura.md`](Arquitectura.md#10-estado-actual-frente-al-objetivo) y se corrige en el PR de refactor de encapsulamiento.
+Los drivers incluyen `Ram.h` solo para obtener constantes y tipos (flecha punteada); no leen ni escriben sus variables, y el compilador lo hace cumplir. El estado interno del `TimerDriver` (bandera, contadores) es privado del driver. Los pendientes frente al diseño objetivo están en [`Arquitectura.md`](Arquitectura.md#10-estado-actual-frente-al-objetivo).
 
 Reglas de la arquitectura:
 - Las constantes (`C_*`), los tipos y las uniones viven solo en `GlobalDefine.h`.
 - Ningún archivo incluye `GlobalDefine.h` directamente: se incluye solo desde `Ram.h`, y el resto de los archivos incluye `Ram.h` para obtener las constantes y los tipos (R8 de [`Arquitectura.md`](Arquitectura.md)).
-- Las variables globales de `Ram.h` solo se declaran si el archivo define `C_RAM_EXPOSE_GLOBALS` antes de incluirlo. Lo definen `main.c`, `Ram.c` y, hasta el refactor, `TimerDriver.c`. Un driver que no lo define y usa una variable global no compila (R1).
+- Las variables globales de `Ram.h` solo se declaran si el archivo define `C_RAM_EXPOSE_GLOBALS` antes de incluirlo. Lo definen `main.c` y `Ram.c`. Un driver que no lo define y usa una variable global no compila (R1).
 - Las variables globales y los alias de bit (`bf_*`) viven en `Ram.c` / `Ram.h`.
 - Cada periférico tiene su driver `[nombre]Driver.c` / `.h`. Un driver valida sus argumentos y devuelve `esp_err_t`; no decide qué hacer ante un error.
 - `MainProcess` agrupa el arranque del micro (reloj y puertos). Quien llama a un driver decide si un error es fatal (`ESP_ERROR_CHECK`).
@@ -58,11 +58,11 @@ El código vive en `AirsoftToolSw/` (declarado como componente en `CMakeLists.tx
 | --- | --- |
 | `main.c` | `app_main`: inicializa, arranca el timer y ejecuta el ciclo principal. |
 | `GlobalDefine.h` | Constantes `C_*` (pines de [`../Hw/esquematico_v1/README.md`](../Hw/esquematico_v1/README.md), tiempos, conversiones, `C_TRUE` / `C_FALSE`) y las uniones `Union8_t`, `Union16_t`, `Union32_t`. |
-| `Ram.c` / `Ram.h` | Variables globales (`gTeam`, `gArmed`, `gActionButton`, `gKeyPressed`, `gSystemTickMs`, `gTickOverrunCount`, `u8MainFlag`), el alias `bf_5MsMainLoopFlag` e `InitRam`. |
-| `MainProcess.c` / `.h` | Procesos base: `InitMainProcess` e `InitSimpleGpioPorts`. |
+| `Ram.c` / `Ram.h` | Modelo de la aplicación (`gTeam`, `gArmed`, `gActionButton`, `gKeyPressed`) e `InitRam`. |
+| `MainProcess.c` / `.h` | Secuencia de arranque: `InitMainProcess` (reloj, puertos simples y timer) e `InitSimpleGpioPorts`. |
 | `ClockDriver.c` / `.h` | Reloj del CPU: `ConfigCpuClock` (240 MHz por PLL con `esp_pm`) y `VerifyCpuClockFrequency`. |
 | `GpioDriver.c` / `.h` | `ConfigGpioAsOutput` y `ConfigGpioAsInput`, con validación de pin. |
-| `TimerDriver.c` / `.h` | Timer periódico (GPTimer): `ConfigPeriodicTimer`, `StartPeriodicTimer` y la ISR de 5 ms. |
+| `TimerDriver.c` / `.h` | Timer periódico de 5 ms (GPTimer): `TimerInit`, `TimerStart`, `TimerWaitMainTick`, `TimerEndMainTick`, `TimerGetSystemTickMs` y `TimerGetOverrunCount`. La bandera `u8MainFlag` (bit `bf_5MsMainLoopFlag`), los contadores, la notificación y la ISR son privados del driver. |
 
 Para agregar un driver nuevo: crear `[nombre]Driver.c` / `.h` y sumarlo a `SRCS` en `AirsoftToolSw/CMakeLists.txt` (y su componente de ESP-IDF a `PRIV_REQUIRES`).
 
@@ -89,7 +89,7 @@ flowchart LR
   TimerDriver_c --> Ram_h
 ```
 
-`TimerDriver.c` usa `Ram.h` porque la ISR escribe `u8MainFlag`, `gSystemTickMs` y `gTickOverrunCount`. `GpioDriver` no depende de `Ram`.
+Ningún driver usa variables de `Ram`: `ClockDriver`, `GpioDriver` y `TimerDriver` incluyen `Ram.h` solo para las constantes `C_*` y las uniones. `main.c` y `Ram.c` definen `C_RAM_EXPOSE_GLOBALS` para ver las variables.
 
 ## Diagrama de clases UML
 
@@ -129,9 +129,6 @@ classDiagram
     +bool gArmed
     +bool gActionButton
     +uint8_t gKeyPressed
-    +uint32_t gSystemTickMs
-    +uint32_t gTickOverrunCount
-    +Union8_t u8MainFlag
     +InitRam() void
   }
   class MainProcess {
@@ -152,8 +149,13 @@ classDiagram
   }
   class TimerDriver {
     <<module>>
-    +ConfigPeriodicTimer(taskToWake) esp_err_t
-    +StartPeriodicTimer() esp_err_t
+    +TimerInit() esp_err_t
+    +TimerStart() esp_err_t
+    +TimerWaitMainTick() void
+    +TimerEndMainTick() void
+    +TimerGetSystemTickMs() uint32_t
+    +TimerGetOverrunCount() uint32_t
+    -u8MainFlag Union8_t
     -PeriodicTimerAlarmIsr() bool
   }
   class Main {
@@ -163,16 +165,17 @@ classDiagram
   Union8_t ..> GlobalDefine : definido en
   Union16_t ..> GlobalDefine : definido en
   Union32_t ..> GlobalDefine : definido en
-  Ram --> Union8_t : u8MainFlag
+  TimerDriver --> Union8_t : u8MainFlag privado
   Main ..> Ram : usa
   Main ..> MainProcess : usa
-  Main ..> TimerDriver : usa
+  Main ..> TimerDriver : espera el periodo
   MainProcess ..> ClockDriver : usa
   MainProcess ..> GpioDriver : usa
+  MainProcess ..> TimerDriver : usa
   MainProcess ..> Ram : usa constantes
   GpioDriver ..> Ram : usa constantes
   ClockDriver ..> Ram : usa constantes
-  TimerDriver ..> Ram : usa constantes y escribe
+  TimerDriver ..> Ram : usa constantes
 ```
 
 ## Secuencia de arranque
@@ -195,8 +198,9 @@ sequenceDiagram
   Clk-->>MP: esp_err_t
   MP->>Gpio: InitSimpleGpioPorts(): ConfigGpioAsOutput / ConfigGpioAsInput
   Gpio-->>MP: esp_err_t
-  Main->>Tim: ConfigPeriodicTimer(tarea actual)
-  Main->>Tim: StartPeriodicTimer()
+  MP->>Tim: TimerInit()
+  MP->>Tim: TimerStart()
+  Tim-->>MP: esp_err_t
   Note over Main: entra al ciclo principal
 ```
 
@@ -206,21 +210,20 @@ sequenceDiagram
 sequenceDiagram
   participant T as GPTimer (hardware)
   participant ISR as PeriodicTimerAlarmIsr
-  participant R as Ram
+  participant S as Estado interno de TimerDriver
   participant L as Ciclo principal (app_main)
   loop cada 5 ms
     T->>ISR: alarma
-    ISR->>R: gSystemTickMs += 5
+    ISR->>S: tick de milisegundos += 5
     alt bf_5MsMainLoopFlag == C_TRUE
-      ISR->>R: gTickOverrunCount++
+      ISR->>S: periodos perdidos++
     else bf_5MsMainLoopFlag == C_FALSE
-      ISR->>R: bf_5MsMainLoopFlag = C_TRUE
+      ISR->>S: bf_5MsMainLoopFlag = C_TRUE
     end
-    ISR->>L: vTaskNotifyGiveFromISR
-    L->>L: ulTaskNotifyTake despierta
-    L->>R: lee bf_5MsMainLoopFlag
+    ISR->>L: notificación a la tarea que espera
+    L->>L: TimerWaitMainTick() regresa
     L->>L: ejecuta las subrutinas
-    L->>R: bf_5MsMainLoopFlag = C_FALSE
+    L->>S: TimerEndMainTick() apaga bf_5MsMainLoopFlag
   end
 ```
 
@@ -228,17 +231,15 @@ Flujo del ciclo principal:
 
 ```mermaid
 flowchart TD
-  A(["Inicio del ciclo"]) --> B["ulTaskNotifyTake: la tarea duerme<br/>hasta la notificación de la ISR"]
-  B --> C{"bf_5MsMainLoopFlag<br/>== C_TRUE"}
-  C -- no --> B
-  C -- sí --> D["Subrutinas del ciclo<br/>una vez cada 5 ms"]
-  D --> E["bf_5MsMainLoopFlag = C_FALSE"]
+  A(["Inicio del ciclo"]) --> B["TimerWaitMainTick: la tarea duerme<br/>hasta el siguiente periodo de 5 ms"]
+  B --> D["Subrutinas del ciclo<br/>una vez cada 5 ms"]
+  D --> E["TimerEndMainTick"]
   E --> B
 ```
 
-Si las subrutinas tardan más de 5 ms, la siguiente interrupción encuentra la bandera todavía en `C_TRUE`: no la vuelve a escribir y suma uno a `gTickOverrunCount`. Ese contador mide si el trabajo del ciclo cabe en el periodo.
+Si las subrutinas tardan más de 5 ms, la siguiente interrupción encuentra la bandera todavía en `C_TRUE`: no la vuelve a escribir y suma un periodo perdido, que se consulta con `TimerGetOverrunCount()`. Ese contador mide si el trabajo del ciclo cabe en el periodo. `TimerGetSystemTickMs()` devuelve los milisegundos desde el arranque del timer.
 
-La bandera es un bit de un byte, y modificarlo es una lectura-modificación-escritura que no es atómica. Por eso cada bit lo escribe un solo contexto a la vez: la ISR lo enciende solo cuando está apagado y el ciclo lo apaga solo cuando está encendido.
+La bandera es un bit de un byte, y modificarlo es una lectura-modificación-escritura que no es atómica. Por eso cada bit lo escribe un solo contexto a la vez: la ISR lo enciende solo cuando está apagado y `TimerEndMainTick()` lo apaga solo cuando está encendido. Todo esto es interno del driver; el ciclo principal solo llama a `TimerWaitMainTick()` y `TimerEndMainTick()`.
 
 ## Configuración
 
@@ -255,7 +256,7 @@ El `sdkconfig` generado no se versiona. Los archivos generados del firmware (`bu
 - Cada archivo lleva un header (descripción, fecha, micro, compilador, IDE, ADE y licencia) y cada función un header con entradas y salidas.
 - Nombres de funciones descriptivos.
 - Constantes solo en `GlobalDefine.h`, con formato `C_[NOMBRE]`. Los archivos incluyen `Ram.h`, no `GlobalDefine.h`; `GlobalDefine.h` solo se incluye desde `Ram.h`. El interruptor `C_RAM_EXPOSE_GLOBALS` se define en cada `.c` que necesita las variables globales (no va en `GlobalDefine.h`, porque entonces lo verían todos).
-- Uniones con nombre `[tamaño][Nombre]` (por ejemplo `u8MainFlag`) y bits con alias `bf_[nombre descriptivo]`.
+- Uniones con nombre `[tamaño][Nombre]` (por ejemplo `u8MainFlag`, privada de `TimerDriver`) y bits con alias `bf_[nombre descriptivo]`, definido junto a la instancia.
 - Condiciones con comparación explícita (`if(x == C_TRUE)`) y paréntesis pegados a la condicional. Los ciclos infinitos se escriben `while(C_TRUE)`.
 - Los inputs no usan pull-ups internos: si hacen falta, van en el esquemático.
 

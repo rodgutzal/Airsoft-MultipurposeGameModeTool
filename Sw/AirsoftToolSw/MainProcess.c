@@ -20,6 +20,7 @@
 #include "Ram.h"
 #include "ClockDriver.h"
 #include "GpioDriver.h"
+#include "TimerDriver.h"
 
 static const char *TAG = "MainProcess";
 
@@ -60,8 +61,8 @@ void InitSimpleGpioPorts(void)
 /**
  * Nombre:      InitMainProcess
  * Descripcion: Imprime los datos del chip (nucleos, revision, flash, PSRAM) y
- *              ejecuta los procesos base: configuracion del reloj (ClockDriver)
- *              y de los puertos simples.
+ *              ejecuta la secuencia de arranque: reloj (ClockDriver), puertos
+ *              simples y timer periodico (TimerInit y TimerStart).
  * Entradas:    Ninguna.
  * Salidas:     Ninguna (escribe en el log).
  */
@@ -79,4 +80,6 @@ void InitMainProcess(void)
 
   ESP_ERROR_CHECK(ConfigCpuClock());
   InitSimpleGpioPorts();
+  ESP_ERROR_CHECK(TimerInit());
+  ESP_ERROR_CHECK(TimerStart());
 }
