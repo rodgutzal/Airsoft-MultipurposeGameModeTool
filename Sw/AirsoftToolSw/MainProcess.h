@@ -1,6 +1,6 @@
 /**
  * Archivo:           MainProcess.h
- * Descripcion:       Declaracion de los procesos base del micro: reloj,
+ * Descripcion:       Declaracion de los procesos base del micro: arranque,
  *                    inicializacion y configuracion de puertos.
  * Fecha de creacion: 2026-11-02
  * Microcontrolador:  ESP32-S3 (modulo ESP32-S3-WROOM-1 N16R8, placa DevKitC-1)
@@ -16,8 +16,6 @@
 
 #include "esp_err.h"
 
-esp_err_t TimerInitialization(void);
-esp_err_t VerifyCpuClockFrequency(void);
 void InitSimpleGpioPorts(void);
 void InitMainProcess(void);
 

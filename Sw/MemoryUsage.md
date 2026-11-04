@@ -1,15 +1,15 @@
-﻿# Uso de memoria
+# Uso de memoria
 
 Se actualiza antes de cada commit que toque `Sw/`, después de compilar y correr `idf.py size`. ESP-IDF v6.1, target esp32s3 (16 MB de flash, 8 MB de PSRAM octal).
 
 ## Estado actual
 
-Branch `b#4_RelojCpu240MHz`, 2026-11-03.
+Branch `b#6_ArquitecturaSistema`, 2026-11-03.
 
 ```
 ROM (Flash)
-  Partición de app (1 MB)  [████░░░░░░░░░░░░░░░░]  19.4 %   usado 203,824 B   libre 844,752 B
-  Flash total (16 MB)      [░░░░░░░░░░░░░░░░░░░░]   1.2 %   usado 203,824 B   libre ≈ 16.6 MB
+  Partición de app (1 MB)  [████░░░░░░░░░░░░░░░░]  19.4 %   usado 203,840 B   libre 844,736 B
+  Flash total (16 MB)      [░░░░░░░░░░░░░░░░░░░░]   1.2 %   usado 203,840 B   libre ≈ 16.6 MB
 
 RAM interna
   DIRAM (datos + código)   [███░░░░░░░░░░░░░░░░░]  16.9 %   usado  57,578 B   libre 284,182 B
@@ -35,4 +35,5 @@ Notas:
 | 2026-11-02 | `a3b0e4a` | 188,016 | 17.9 | 54,890 | 16.1 | Proyecto base con GlobalDefine, Ram y MainProcess |
 | 2026-11-02 | `5393c27` | 188,016 | 17.9 | 54,890 | 16.1 | Formato Allman, headers de archivo y funcion, nombres descriptivos; sin cambio de tamano |
 | 2026-11-02 | `fb8cd28` | 189,424 | 18.1 | 54,890 | 16.1 | Driver GpioDriver (validacion de pin, esp_err_t); entradas sin pull interno |
-| 2026-11-03 | este commit (sobre `5ef4950`) | 203,824 | 19.4 | 57,578 | 16.9 | TimerInitialization (reloj 240 MHz con esp_pm), constantes C_, timer periodico de 5 ms con u8MainFlag, uniones, reglas de formato |
+| 2026-11-03 | `def49dd` | 203,824 | 19.4 | 57,578 | 16.9 | TimerInitialization (reloj 240 MHz con esp_pm), constantes C_, timer periodico de 5 ms con u8MainFlag, uniones, reglas de formato |
+| 2026-11-03 | este commit (sobre `248c9b1`) | 203,840 | 19.4 | 57,578 | 16.9 | ClockDriver (reloj movido fuera de MainProcess); sin cambio de tamano relevante |

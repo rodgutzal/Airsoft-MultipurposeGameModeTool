@@ -2,11 +2,11 @@
 
 Firmware de la herramienta, con ESP-IDF v6.1 para el ESP32-S3-DevKitC-1 N16R8.
 
-Estado actual: proyecto base. Al arrancar inicializa la RAM, fija el reloj del CPU a 240 MHz, configura los puertos simples e inicia un timer de 5 ms que gobierna el ciclo principal. Las subrutinas del ciclo todavía no existen; el espacio está marcado en `main.c`. No se ha flasheado en la placa: solo se comprobó que compila.
+Estado actual: proyecto base. Al arrancar inicializa la RAM, fija el reloj del CPU a 240 MHz con el `ClockDriver`, configura los puertos simples e inicia un timer de 5 ms que gobierna el ciclo principal. Las subrutinas del ciclo todavía no existen; el espacio está marcado en `main.c`. No se ha flasheado en la placa: solo se comprobó que compila.
 
 ## Arquitectura
 
-El firmware se organiza en capas. Cada capa solo usa a la de abajo.
+El firmware se organiza en capas. Cada capa solo usa a la de abajo. El diseño objetivo (reglas de encapsulamiento, catálogo de drivers, tareas y núcleos, memoria y plan de PRs) está en [`Arquitectura.md`](Arquitectura.md); esta sección y las siguientes describen el código **actual**.
 
 ```mermaid
 flowchart TB
@@ -14,7 +14,7 @@ flowchart TB
     MAIN["main.c<br/>app_main y ciclo principal"]
     MP["MainProcess<br/>procesos base"]
     RAM["Ram<br/>variables globales"]
-    DRV["Drivers propios<br/>GpioDriver, TimerDriver"]
+    DRV["Drivers propios<br/>ClockDriver, GpioDriver, TimerDriver"]
     GD["GlobalDefine.h<br/>constantes y tipos"]
   end
   subgraph IDF["ESP-IDF v6.1"]
@@ -28,11 +28,11 @@ flowchart TB
   MAIN --> RAM
   MAIN --> DRV
   MP --> DRV
-  DRV --> RAM
+  DRV -. "escribe (viola R1)" .-> RAM
   MP --> GD
   DRV --> GD
   RAM --> GD
-  MP --> PM
+  DRV --> PM
   DRV --> GPIO
   DRV --> GPT
   MAIN --> FR
@@ -40,6 +40,8 @@ flowchart TB
   GPT --> HW
   PM --> HW
 ```
+
+El código actual **todavía no cumple** la regla de capas en un punto: la ISR de `TimerDriver` escribe variables de `Ram` (flecha punteada). Está registrado en [`Arquitectura.md`](Arquitectura.md#10-estado-actual-frente-al-objetivo) y se corrige en el PR de refactor de encapsulamiento.
 
 Reglas de la arquitectura:
 - Las constantes (`C_*`), los tipos y las uniones viven solo en `GlobalDefine.h`.
@@ -56,7 +58,8 @@ El código vive en `AirsoftToolSw/` (declarado como componente en `CMakeLists.tx
 | `main.c` | `app_main`: inicializa, arranca el timer y ejecuta el ciclo principal. |
 | `GlobalDefine.h` | Constantes `C_*` (pines de [`../Hw/esquematico_v1/README.md`](../Hw/esquematico_v1/README.md), tiempos, conversiones, `C_TRUE` / `C_FALSE`) y las uniones `Union8_t`, `Union16_t`, `Union32_t`. |
 | `Ram.c` / `Ram.h` | Variables globales (`gTeam`, `gArmed`, `gActionButton`, `gKeyPressed`, `gSystemTickMs`, `gTickOverrunCount`, `u8MainFlag`), el alias `bf_5MsMainLoopFlag` e `InitRam`. |
-| `MainProcess.c` / `.h` | Procesos base: `InitMainProcess`, `TimerInitialization`, `VerifyCpuClockFrequency`, `InitSimpleGpioPorts`. |
+| `MainProcess.c` / `.h` | Procesos base: `InitMainProcess` e `InitSimpleGpioPorts`. |
+| `ClockDriver.c` / `.h` | Reloj del CPU: `ConfigCpuClock` (240 MHz por PLL con `esp_pm`) y `VerifyCpuClockFrequency`. |
 | `GpioDriver.c` / `.h` | `ConfigGpioAsOutput` y `ConfigGpioAsInput`, con validación de pin. |
 | `TimerDriver.c` / `.h` | Timer periódico (GPTimer): `ConfigPeriodicTimer`, `StartPeriodicTimer` y la ISR de 5 ms. |
 
@@ -75,6 +78,9 @@ flowchart LR
   Ram_c["Ram.c"] --> Ram_h
   MainProcess_c["MainProcess.c"] --> MainProcess_h
   MainProcess_c --> GlobalDefine_h
+  MainProcess_c --> ClockDriver_h["ClockDriver.h"]
+  ClockDriver_c["ClockDriver.c"] --> ClockDriver_h
+  ClockDriver_c --> GlobalDefine_h
   MainProcess_c --> GpioDriver_h["GpioDriver.h"]
   GpioDriver_c["GpioDriver.c"] --> GpioDriver_h
   GpioDriver_c --> GlobalDefine_h
@@ -131,9 +137,12 @@ classDiagram
   class MainProcess {
     <<module>>
     +InitMainProcess() void
-    +TimerInitialization() esp_err_t
-    +VerifyCpuClockFrequency() esp_err_t
     +InitSimpleGpioPorts() void
+  }
+  class ClockDriver {
+    <<module>>
+    +ConfigCpuClock() esp_err_t
+    +VerifyCpuClockFrequency() esp_err_t
   }
   class GpioDriver {
     <<module>>
@@ -158,6 +167,7 @@ classDiagram
   Main ..> Ram : usa
   Main ..> MainProcess : usa
   Main ..> TimerDriver : usa
+  MainProcess ..> ClockDriver : usa
   MainProcess ..> GpioDriver : usa
   MainProcess ..> GlobalDefine : usa
   GpioDriver ..> GlobalDefine : usa
@@ -173,14 +183,16 @@ sequenceDiagram
   participant Main as app_main
   participant Ram
   participant MP as MainProcess
+  participant Clk as ClockDriver
   participant Gpio as GpioDriver
   participant Tim as TimerDriver
   IDF->>Main: arranque, CPU a 240 MHz
   Main->>Ram: InitRam()
   Main->>MP: InitMainProcess()
   MP->>MP: imprime chip, flash y PSRAM
-  MP->>MP: TimerInitialization()
-  Note over MP: esp_pm_configure fija 240 MHz y<br/>VerifyCpuClockFrequency lo comprueba
+  MP->>Clk: ConfigCpuClock()
+  Note over Clk: esp_pm_configure fija 240 MHz y<br/>VerifyCpuClockFrequency lo comprueba
+  Clk-->>MP: esp_err_t
   MP->>Gpio: InitSimpleGpioPorts(): ConfigGpioAsOutput / ConfigGpioAsInput
   Gpio-->>MP: esp_err_t
   Main->>Tim: ConfigPeriodicTimer(tarea actual)
@@ -233,7 +245,7 @@ La bandera es un bit de un byte, y modificarlo es una lectura-modificación-escr
 `sdkconfig.defaults` fija:
 - target `esp32s3`, flash de 16 MB y PSRAM octal de 8 MB a 80 MHz;
 - CPU a 240 MHz (PLL sobre el cristal de 40 MHz; el oscilador interno RC_FAST de unos 17.5 MHz no se usa como fuente del CPU);
-- `CONFIG_PM_ENABLE`, necesario para `esp_pm_configure` en `TimerInitialization`.
+- `CONFIG_PM_ENABLE`, necesario para `esp_pm_configure` en `ConfigCpuClock`.
 
 El `sdkconfig` generado no se versiona.
 
