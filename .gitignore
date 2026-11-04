@@ -1,0 +1,36 @@
+# Archivos que no se versionan en este repositorio.
+# Los PDF de Hw/ (manuales y exportaciones del esquematico) y el Excel de la
+# lista de materiales SI se versionan, por eso no se ignoran.
+# El firmware tiene ademas su propio Sw/.gitignore (build, sdkconfig, etc.).
+
+# ---- Editor: configuracion local de cada maquina ----
+# .vscode/settings.json guarda rutas absolutas (por ejemplo C:\esp\v6.1\esp-idf).
+.vscode/
+.idea/
+*.swp
+*~
+
+# ---- Python (gen_sch.py) ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ---- KiCad: respaldos, autoguardados, bloqueos y ajustes locales ----
+*-backups/
+_autosave-*
+~*.lck
+*.kicad_prl
+fp-info-cache
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*.kicad_pro-bak
+
+# ---- Excel y LibreOffice: archivos temporales de documentos abiertos ----
+~$*
+.~lock.*#
+
+# ---- Sistema operativo ----
+Thumbs.db
+desktop.ini
+.DS_Store
