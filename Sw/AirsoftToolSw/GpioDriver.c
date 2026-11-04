@@ -15,7 +15,7 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "GpioDriver.h"
-#include "GlobalDefine.h"
+#include "Ram.h"
 
 static const char *TAG = "GpioDriver";
 

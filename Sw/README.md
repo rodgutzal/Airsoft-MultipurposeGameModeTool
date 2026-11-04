@@ -29,8 +29,7 @@ flowchart TB
   MAIN --> DRV
   MP --> DRV
   DRV -. "escribe (viola R1)" .-> RAM
-  MP --> GD
-  DRV --> GD
+  MP --> RAM
   RAM --> GD
   DRV --> PM
   DRV --> GPIO
@@ -45,6 +44,8 @@ El código actual **todavía no cumple** la regla de capas en un punto: la ISR d
 
 Reglas de la arquitectura:
 - Las constantes (`C_*`), los tipos y las uniones viven solo en `GlobalDefine.h`.
+- Ningún archivo incluye `GlobalDefine.h` directamente: se incluye solo desde `Ram.h`, y el resto de los archivos incluye `Ram.h` para obtener las constantes y los tipos (R8 de [`Arquitectura.md`](Arquitectura.md)).
+- Las variables globales de `Ram.h` solo se declaran si el archivo define `C_RAM_EXPOSE_GLOBALS` antes de incluirlo. Lo definen `main.c`, `Ram.c` y, hasta el refactor, `TimerDriver.c`. Un driver que no lo define y usa una variable global no compila (R1).
 - Las variables globales y los alias de bit (`bf_*`) viven en `Ram.c` / `Ram.h`.
 - Cada periférico tiene su driver `[nombre]Driver.c` / `.h`. Un driver valida sus argumentos y devuelve `esp_err_t`; no decide qué hacer ante un error.
 - `MainProcess` agrupa el arranque del micro (reloj y puertos). Quien llama a un driver decide si un error es fatal (`ESP_ERROR_CHECK`).
@@ -77,15 +78,14 @@ flowchart LR
   Ram_h --> GlobalDefine_h["GlobalDefine.h"]
   Ram_c["Ram.c"] --> Ram_h
   MainProcess_c["MainProcess.c"] --> MainProcess_h
-  MainProcess_c --> GlobalDefine_h
+  MainProcess_c --> Ram_h
   MainProcess_c --> ClockDriver_h["ClockDriver.h"]
   ClockDriver_c["ClockDriver.c"] --> ClockDriver_h
-  ClockDriver_c --> GlobalDefine_h
+  ClockDriver_c --> Ram_h
   MainProcess_c --> GpioDriver_h["GpioDriver.h"]
   GpioDriver_c["GpioDriver.c"] --> GpioDriver_h
-  GpioDriver_c --> GlobalDefine_h
+  GpioDriver_c --> Ram_h
   TimerDriver_c["TimerDriver.c"] --> TimerDriver_h
-  TimerDriver_c --> GlobalDefine_h
   TimerDriver_c --> Ram_h
 ```
 
@@ -169,10 +169,10 @@ classDiagram
   Main ..> TimerDriver : usa
   MainProcess ..> ClockDriver : usa
   MainProcess ..> GpioDriver : usa
-  MainProcess ..> GlobalDefine : usa
-  GpioDriver ..> GlobalDefine : usa
-  TimerDriver ..> Ram : escribe
-  TimerDriver ..> GlobalDefine : usa
+  MainProcess ..> Ram : usa constantes
+  GpioDriver ..> Ram : usa constantes
+  ClockDriver ..> Ram : usa constantes
+  TimerDriver ..> Ram : usa constantes y escribe
 ```
 
 ## Secuencia de arranque
@@ -254,7 +254,7 @@ El `sdkconfig` generado no se versiona.
 - Llave de apertura en la línea de abajo, indentación de 2 espacios y cuerpo un nivel adentro.
 - Cada archivo lleva un header (descripción, fecha, micro, compilador, IDE, ADE y licencia) y cada función un header con entradas y salidas.
 - Nombres de funciones descriptivos.
-- Constantes solo en `GlobalDefine.h`, con formato `C_[NOMBRE]`.
+- Constantes solo en `GlobalDefine.h`, con formato `C_[NOMBRE]`. Los archivos incluyen `Ram.h`, no `GlobalDefine.h`; `GlobalDefine.h` solo se incluye desde `Ram.h`. El interruptor `C_RAM_EXPOSE_GLOBALS` se define en cada `.c` que necesita las variables globales (no va en `GlobalDefine.h`, porque entonces lo verían todos).
 - Uniones con nombre `[tamaño][Nombre]` (por ejemplo `u8MainFlag`) y bits con alias `bf_[nombre descriptivo]`.
 - Condiciones con comparación explícita (`if(x == C_TRUE)`) y paréntesis pegados a la condicional. Los ciclos infinitos se escriben `while(C_TRUE)`.
 - Los inputs no usan pull-ups internos: si hacen falta, van en el esquemático.

@@ -17,7 +17,7 @@
 #include "soc/rtc.h"
 #include "soc/clk_tree_defs.h"
 #include "ClockDriver.h"
-#include "GlobalDefine.h"
+#include "Ram.h"
 
 static const char *TAG = "ClockDriver";
 

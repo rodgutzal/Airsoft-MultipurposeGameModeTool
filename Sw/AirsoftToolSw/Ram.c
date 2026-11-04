@@ -11,6 +11,7 @@
  *                    ESP-IDF se distribuye bajo Apache-2.0.
  */
 
+#define C_RAM_EXPOSE_GLOBALS
 #include "Ram.h"
 
 uint8_t  gTeam;
