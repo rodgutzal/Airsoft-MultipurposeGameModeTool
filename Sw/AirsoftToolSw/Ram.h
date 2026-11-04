@@ -23,25 +23,18 @@
  * GlobalDefine.h. Las variables globales y InitRam() solo se declaran si el
  * archivo define C_RAM_EXPOSE_GLOBALS antes de incluir Ram.h. Los drivers no lo
  * definen, asi que si intentan usar una variable global no compila (R1).
- * Lo definen: main.c, Ram.c y, mientras dure el refactor, TimerDriver.c. */
+ * Lo definen: main.c y Ram.c. */
 #ifdef C_RAM_EXPOSE_GLOBALS
 
-/* Variables globales. Se definen en Ram.c y se inicializan en InitRam(). */
+/* Modelo de la aplicacion. Se define en Ram.c y se inicializa en InitRam().
+ * Cada variable tiene un solo responsable de escritura (R6); los demas la leen.
+ * El estado interno de un driver (banderas, contadores del timer) no va aqui:
+ * es privado del driver y se consulta con sus funciones. */
 
-extern uint8_t  gTeam;                       /* C_TEAM_RED o C_TEAM_BLUE */
-extern bool     gArmed;                      /* interruptor de llave */
-extern bool     gActionButton;               /* push button de accion */
-extern uint8_t  gKeyPressed;                 /* C_KEY_NONE = ninguna tecla */
-extern volatile uint32_t gSystemTickMs;      /* contador de milisegundos (lo suma la ISR del timer) */
-extern uint32_t gTickOverrunCount;           /* periodos del timer que el ciclo principal no alcanzo a atender */
-extern volatile Union8_t u8MainFlag;         /* banderas del ciclo principal */
-
-/* Nombres de bit de u8MainFlag: cada bf_ es un alias de un bit y se usa como
- * u8MainFlag.bf_5MsMainLoopFlag.
- * Regla de escritura: cada bit lo escribe un solo contexto a la vez, porque
- * modificar un bit es una lectura-modificacion-escritura del byte completo
- * y no es atomica. */
-#define bf_5MsMainLoopFlag  Bits.Bit0  /* la ISR lo enciende cada C_TIMER_PERIOD_MS */
+extern uint8_t  gTeam;                       /* C_TEAM_RED o C_TEAM_BLUE. Responsable de escritura (previsto): InputDriver */
+extern bool     gArmed;                      /* interruptor de llave. Responsable de escritura (previsto): InputDriver */
+extern bool     gActionButton;               /* push button de accion. Responsable de escritura (previsto): InputDriver */
+extern uint8_t  gKeyPressed;                 /* C_KEY_NONE = ninguna tecla. Responsable de escritura (previsto): KeypadDriver */
 
 void InitRam(void);
 

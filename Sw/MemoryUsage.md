@@ -4,15 +4,15 @@ Se actualiza antes de cada commit que toque `Sw/`, después de compilar y correr
 
 ## Estado actual
 
-Branch `b#7_RamComoHeaderComun`, 2026-11-04.
+Branch `b#9_RefactorEncapsulamiento`, 2026-11-04.
 
 ```
 ROM (Flash)
-  Partición de app (1 MB)  [████░░░░░░░░░░░░░░░░]  19.4 %   usado 203,840 B   libre 844,736 B
-  Flash total (16 MB)      [░░░░░░░░░░░░░░░░░░░░]   1.2 %   usado 203,840 B   libre ≈ 16.6 MB
+  Partición de app (1 MB)  [████░░░░░░░░░░░░░░░░]  19.4 %   usado 203,728 B   libre 844,848 B
+  Flash total (16 MB)      [░░░░░░░░░░░░░░░░░░░░]   1.2 %   usado 203,728 B   libre ≈ 16.6 MB
 
 RAM interna
-  DIRAM (datos + código)   [███░░░░░░░░░░░░░░░░░]  16.9 %   usado  57,578 B   libre 284,182 B
+  DIRAM (datos + código)   [███░░░░░░░░░░░░░░░░░]  16.9 %   usado  57,586 B   libre 284,174 B
      .text  40,619 B (11.9 %)   .data 13,999 B (4.1 %)   .bss 2,960 B (0.9 %)
   IRAM (código rápido)     [████████████████████] 100.0 %   usado  16,384 B   libre       0 B
   RTC SLOW                 [░░░░░░░░░░░░░░░░░░░░]   0.4 %   usado      36 B   libre   8,156 B
@@ -37,4 +37,5 @@ Notas:
 | 2026-11-02 | `fb8cd28` | 189,424 | 18.1 | 54,890 | 16.1 | Driver GpioDriver (validacion de pin, esp_err_t); entradas sin pull interno |
 | 2026-11-03 | `def49dd` | 203,824 | 19.4 | 57,578 | 16.9 | TimerInitialization (reloj 240 MHz con esp_pm), constantes C_, timer periodico de 5 ms con u8MainFlag, uniones, reglas de formato |
 | 2026-11-03 | `6a4793f` | 203,840 | 19.4 | 57,578 | 16.9 | ClockDriver (reloj movido fuera de MainProcess); sin cambio de tamano relevante |
-| 2026-11-04 | este commit (sobre `9890c32`) | 203,840 | 19.4 | 57,578 | 16.9 | Los archivos incluyen Ram.h en lugar de GlobalDefine.h (R8) y interruptor C_RAM_EXPOSE_GLOBALS (R1); sin cambio de tamano |
+| 2026-11-04 | `1a59c69` | 203,840 | 19.4 | 57,578 | 16.9 | Los archivos incluyen Ram.h en lugar de GlobalDefine.h (R8) y interruptor C_RAM_EXPOSE_GLOBALS (R1); sin cambio de tamano |
+| 2026-11-04 | este commit (sobre `9a06e22`) | 203,728 | 19.4 | 57,586 | 16.9 | Refactor de encapsulamiento: TimerDriver con estado privado y API TimerWaitMainTick/TimerEndMainTick; secuencia de arranque unica |
