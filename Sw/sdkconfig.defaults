@@ -12,5 +12,12 @@ CONFIG_SPIRAM_SPEED_80M=y
 # CPU a 240 MHz desde el arranque (PLL sobre el cristal de 40 MHz)
 CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
 
-# Gestion de energia: necesaria para esp_pm_configure (TimerInitialization)
+# Gestion de energia: necesaria para esp_pm_configure (ConfigCpuClock)
 CONFIG_PM_ENABLE=y
+
+# Tabla de particiones propia (Sw/partitions.csv): nvs, OTA doble y storage
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# La ISR del timer sigue viva mientras se escribe o borra la flash
+CONFIG_GPTIMER_ISR_IRAM_SAFE=y

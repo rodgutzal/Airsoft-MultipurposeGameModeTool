@@ -19,6 +19,7 @@
 #include "MainProcess.h"
 #include "Ram.h"
 #include "ClockDriver.h"
+#include "FlashDriver.h"
 #include "GpioDriver.h"
 #include "TimerDriver.h"
 
@@ -62,7 +63,9 @@ void InitSimpleGpioPorts(void)
  * Nombre:      InitMainProcess
  * Descripcion: Imprime los datos del chip (nucleos, revision, flash, PSRAM) y
  *              ejecuta la secuencia de arranque: reloj (ClockDriver), puertos
- *              simples y timer periodico (TimerInit y TimerStart).
+ *              simples, almacenamiento en flash (FlashInit; si falla solo se
+ *              avisa y el firmware sigue sin guardar datos) y timer periodico
+ *              (TimerInit y TimerStart).
  * Entradas:    Ninguna.
  * Salidas:     Ninguna (escribe en el log).
  */
@@ -80,6 +83,12 @@ void InitMainProcess(void)
 
   ESP_ERROR_CHECK(ConfigCpuClock());
   InitSimpleGpioPorts();
+
+  if(FlashInit() != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Sin almacenamiento en flash: los datos no se guardaran");
+  }
+
   ESP_ERROR_CHECK(TimerInit());
   ESP_ERROR_CHECK(TimerStart());
 }

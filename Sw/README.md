@@ -14,7 +14,7 @@ flowchart TB
     MAIN["main.c<br/>app_main y ciclo principal"]
     MP["MainProcess<br/>procesos base"]
     RAM["Ram<br/>variables globales"]
-    DRV["Drivers propios<br/>ClockDriver, GpioDriver, TimerDriver"]
+    DRV["Drivers propios<br/>ClockDriver, FlashDriver, GpioDriver, TimerDriver"]
     GD["GlobalDefine.h<br/>constantes y tipos"]
   end
   subgraph IDF["ESP-IDF v6.1"]
@@ -22,8 +22,9 @@ flowchart TB
     GPIO["esp_driver_gpio"]
     GPT["esp_driver_gptimer"]
     PM["esp_pm / esp_clk_tree"]
+    NVS["nvs_flash"]
   end
-  HW["ESP32-S3: GPIO, GPTimer, PLL 240 MHz"]
+  HW["ESP32-S3: GPIO, GPTimer, PLL 240 MHz, flash"]
   MAIN --> MP
   MAIN --> RAM
   MAIN --> DRV
@@ -34,6 +35,8 @@ flowchart TB
   DRV --> PM
   DRV --> GPIO
   DRV --> GPT
+  DRV --> NVS
+  NVS --> HW
   MAIN --> FR
   GPIO --> HW
   GPT --> HW
@@ -59,9 +62,11 @@ El código vive en `AirsoftToolSw/` (declarado como componente en `CMakeLists.tx
 | `main.c` | `app_main`: inicializa, arranca el timer y ejecuta el ciclo principal. |
 | `GlobalDefine.h` | Constantes `C_*` (pines de [`../Hw/esquematico_v1/README.md`](../Hw/esquematico_v1/README.md), tiempos, conversiones, `C_TRUE` / `C_FALSE`) y las uniones `Union8_t`, `Union16_t`, `Union32_t`. |
 | `Ram.c` / `Ram.h` | Modelo de la aplicación (`gTeam`, `gArmed`, `gActionButton`, `gKeyPressed`) e `InitRam`. |
-| `MainProcess.c` / `.h` | Secuencia de arranque: `InitMainProcess` (reloj, puertos simples y timer) e `InitSimpleGpioPorts`. |
+| `MainProcess.c` / `.h` | Secuencia de arranque: `InitMainProcess` (reloj, puertos simples, almacenamiento en flash y timer) e `InitSimpleGpioPorts`. |
 | `ClockDriver.c` / `.h` | Reloj del CPU: `ConfigCpuClock` (240 MHz por PLL con `esp_pm`) y `VerifyCpuClockFrequency`. |
 | `GpioDriver.c` / `.h` | `ConfigGpioAsOutput` y `ConfigGpioAsInput`, con validación de pin. |
+| `FlashDriver.c` / `.h` | Almacenamiento persistente en flash (NVS) bajo el espacio de nombres `C_FLASH_NAMESPACE`: `FlashInit`, `FlashReadU32` / `FlashWriteU32`, `FlashReadBlob` / `FlashWriteBlob` y `FlashEraseAll`. Las escrituras son bloqueantes (decenas de ms): no se llaman dentro de las subrutinas del ciclo de 5 ms. |
+| `partitions.csv` | Tabla de particiones propia (ver Configuración). |
 | `TimerDriver.c` / `.h` | Timer periódico de 5 ms (GPTimer): `TimerInit`, `TimerStart`, `TimerWaitMainTick`, `TimerEndMainTick`, `TimerGetSystemTickMs` y `TimerGetOverrunCount`. La bandera `u8MainFlag` (bit `bf_5MsMainLoopFlag`), los contadores, la notificación y la ISR son privados del driver. |
 
 Para agregar un driver nuevo: crear `[nombre]Driver.c` / `.h` y sumarlo a `SRCS` en `AirsoftToolSw/CMakeLists.txt` (y su componente de ESP-IDF a `PRIV_REQUIRES`).
@@ -82,6 +87,9 @@ flowchart LR
   MainProcess_c --> ClockDriver_h["ClockDriver.h"]
   ClockDriver_c["ClockDriver.c"] --> ClockDriver_h
   ClockDriver_c --> Ram_h
+  MainProcess_c --> FlashDriver_h["FlashDriver.h"]
+  FlashDriver_c["FlashDriver.c"] --> FlashDriver_h
+  FlashDriver_c --> Ram_h
   MainProcess_c --> GpioDriver_h["GpioDriver.h"]
   GpioDriver_c["GpioDriver.c"] --> GpioDriver_h
   GpioDriver_c --> Ram_h
@@ -89,7 +97,7 @@ flowchart LR
   TimerDriver_c --> Ram_h
 ```
 
-Ningún driver usa variables de `Ram`: `ClockDriver`, `GpioDriver` y `TimerDriver` incluyen `Ram.h` solo para las constantes `C_*` y las uniones. `main.c` y `Ram.c` definen `C_RAM_EXPOSE_GLOBALS` para ver las variables.
+Ningún driver usa variables de `Ram`: `ClockDriver`, `FlashDriver`, `GpioDriver` y `TimerDriver` incluyen `Ram.h` solo para las constantes `C_*` y las uniones. `main.c` y `Ram.c` definen `C_RAM_EXPOSE_GLOBALS` para ver las variables.
 
 ## Diagrama de clases UML
 
@@ -141,6 +149,17 @@ classDiagram
     +ConfigCpuClock() esp_err_t
     +VerifyCpuClockFrequency() esp_err_t
   }
+  class FlashDriver {
+    <<module>>
+    +FlashInit() esp_err_t
+    +FlashReadU32(key, value) esp_err_t
+    +FlashWriteU32(key, value) esp_err_t
+    +FlashReadBlob(key, buffer, length) esp_err_t
+    +FlashWriteBlob(key, data, length) esp_err_t
+    +FlashEraseAll() esp_err_t
+    -IsFlashKeyValid(key) bool
+    -OpenFlashNamespace(mode, handle) esp_err_t
+  }
   class GpioDriver {
     <<module>>
     +ConfigGpioAsOutput(pin, level) esp_err_t
@@ -170,7 +189,9 @@ classDiagram
   Main ..> MainProcess : usa
   Main ..> TimerDriver : espera el periodo
   MainProcess ..> ClockDriver : usa
+  MainProcess ..> FlashDriver : usa
   MainProcess ..> GpioDriver : usa
+  FlashDriver ..> Ram : usa constantes
   MainProcess ..> TimerDriver : usa
   MainProcess ..> Ram : usa constantes
   GpioDriver ..> Ram : usa constantes
@@ -188,6 +209,7 @@ sequenceDiagram
   participant MP as MainProcess
   participant Clk as ClockDriver
   participant Gpio as GpioDriver
+  participant Fl as FlashDriver
   participant Tim as TimerDriver
   IDF->>Main: arranque, CPU a 240 MHz
   Main->>Ram: InitRam()
@@ -198,6 +220,9 @@ sequenceDiagram
   Clk-->>MP: esp_err_t
   MP->>Gpio: InitSimpleGpioPorts(): ConfigGpioAsOutput / ConfigGpioAsInput
   Gpio-->>MP: esp_err_t
+  MP->>Fl: FlashInit()
+  Note over Fl: nvs_flash_init; si la particion esta llena<br/>o es de otra version, la borra y la crea
+  Fl-->>MP: esp_err_t (si falla solo se avisa)
   MP->>Tim: TimerInit()
   MP->>Tim: TimerStart()
   Tim-->>MP: esp_err_t
@@ -246,8 +271,24 @@ La bandera es un bit de un byte, y modificarlo es una lectura-modificación-escr
 `sdkconfig.defaults` fija:
 - target `esp32s3`, flash de 16 MB y PSRAM octal de 8 MB a 80 MHz;
 - CPU a 240 MHz (PLL sobre el cristal de 40 MHz; el oscilador interno RC_FAST de unos 17.5 MHz no se usa como fuente del CPU);
-- `CONFIG_PM_ENABLE`, necesario para `esp_pm_configure` en `ConfigCpuClock`.
+- `CONFIG_PM_ENABLE`, necesario para `esp_pm_configure` en `ConfigCpuClock`;
+- la tabla de particiones propia `partitions.csv` (`CONFIG_PARTITION_TABLE_CUSTOM`);
+- `CONFIG_GPTIMER_ISR_IRAM_SAFE`: la ISR del timer de 5 ms sigue viva mientras se escribe o borra la flash.
 
+### Tabla de particiones
+
+La flash es de 16 MB. `Sw/partitions.csv` asigna 10.1 MB y deja 5.9 MB de reserva:
+
+| Partición | Offset | Tamaño | Uso |
+| --- | --- | --- | --- |
+| `nvs` | `0x9000` | 24 KB | Datos de `FlashDriver` |
+| `otadata` | `0xF000` | 8 KB | Control de actualización OTA |
+| `phy_init` | `0x11000` | 4 KB | Calibración de radio |
+| `ota_0` | `0x20000` | 3 MB | Firmware (`idf.py flash` escribe aquí) |
+| `ota_1` | `0x320000` | 3 MB | Segundo slot para actualización OTA |
+| `storage` | `0x620000` | 4 MB | Sonidos y recursos gráficos (sin uso todavía) |
+
+No hay partición `factory`: el arranque usa `ota_0`. Cambiar la tabla exige reflashear todo el chip.
 El `sdkconfig` generado no se versiona. Los archivos generados del firmware (`build/`, `sdkconfig`, `sdkconfig.old`, `managed_components/`, `dependencies.lock`, `.cache/` y `.clangd`) están en `Sw/.gitignore`; la configuración local de editor, Python, KiCad, Excel y el sistema operativo está en el `.gitignore` de la raíz.
 
 ## Reglas de formato del código

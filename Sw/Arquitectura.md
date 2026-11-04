@@ -75,7 +75,7 @@ Reglas de la figura: una flecha hacia abajo es "usa". Ningún driver lee ni escr
 | `ClockDriver` | Reloj del CPU a 240 MHz | `esp_pm`, `esp_clk_tree` | Hecho (esta rama) |
 | `GpioDriver` | Pines de entrada y salida | `esp_driver_gpio` | Hecho |
 | `TimerDriver` | Interrupción periódica de 5 ms | `esp_driver_gptimer` | Hecho; cumple R1 a R3 |
-| `FlashDriver` | Configuración y estadísticas en flash | `nvs_flash` / particiones | Pendiente |
+| `FlashDriver` | Configuración y estadísticas en flash | `nvs_flash` / particiones | Hecho |
 | `WatchdogDriver` | Watchdog de tareas y de interrupciones | `esp_task_wdt` | Pendiente |
 | `DmaDriver` | Buffers aptos para DMA, copia asíncrona y cola de transferencias | `heap_caps`, `esp_async_memcpy` | Pendiente |
 | `LedStripDriver` | Dos tiras WS2812B (GPIO 3 y 46) | `esp_driver_rmt` | Pendiente |
@@ -165,21 +165,21 @@ Cambios de configuración que implica (se hacen en el PR que los necesite, no en
 - `CONFIG_FREERTOS_HZ=1000` (hoy 100, tick de 10 ms).
 - Pila propia en cada tarea; la de `app_main` (3.5 KB) es corta.
 - La ISR del timer se asigna al núcleo desde el que se llama `gptimer_enable`; debe configurarse desde la tarea de control, en el núcleo 1.
-- Evaluar `CONFIG_GPTIMER_ISR_IRAM_SAFE` si la ISR debe seguir viva durante escrituras en flash.
+- `CONFIG_GPTIMER_ISR_IRAM_SAFE` (hecho en el PR de `FlashDriver`): la ISR del timer sigue viva durante las escrituras en flash.
 
 ## 8. Memoria y particiones
 
 - **RAM interna:** unos 284 KB libres. Un cuadro completo de 480x320 en RGB565 son 307,200 B y no cabe; el framebuffer iría en la PSRAM (8 MB) o se dibuja por regiones (cuadrante de 76,800 B, etiqueta de unos 9,600 B).
-- **Flash:** la tabla de particiones por defecto da 1 MB a la app. Con ESP-NOW y gráficos conviene una tabla propia que aproveche los 16 MB. Propuesta a validar en el PR de `FlashDriver`:
+- **Flash:** la tabla por defecto daba 1 MB a la app. Con ESP-NOW y gráficos hace falta más, así que el PR de `FlashDriver` la reemplazó por `Sw/partitions.csv` (detalle de offsets en el [`README.md`](README.md#tabla-de-particiones)). Solo se comprobó que compila y genera la tabla; no se ha flasheado:
 
-| Partición | Tamaño propuesto | Uso |
+| Partición | Tamaño | Uso |
 | --- | --- | --- |
 | `nvs` | 24 KB | Configuración y estadísticas |
 | `otadata` | 8 KB | Control de actualización |
 | `phy_init` | 4 KB | Calibración de radio |
 | `ota_0` / `ota_1` | 3 MB cada una | Firmware y actualización OTA |
 | `storage` | 4 MB | Sonidos y recursos gráficos |
-| (libre) | resto | Reserva |
+| (libre) | 5.9 MB | Reserva |
 
 ## 9. Red entre dispositivos
 
@@ -208,7 +208,7 @@ Cada PR parte de `develop` actualizado, lleva su propia branch y actualiza `READ
 | Orden | PR | Contenido |
 | --- | --- | --- |
 | 0 | Refactor de encapsulamiento (hecho) | `TimerDriver` según el punto 6, secuencia de arranque única en `InitMainProcess`, `Ram` reducida al modelo de la aplicación con su responsable de escritura previsto. |
-| 1 | `FlashDriver` | Escritura en flash (NVS) y tabla de particiones propia. |
+| 1 | `FlashDriver` (hecho) | Escritura en flash (NVS) y tabla de particiones propia. |
 | 2 | `WatchdogDriver` | Watchdog de tareas y de interrupciones. |
 | 3 | `DmaDriver` | Buffers aptos para DMA, copia asíncrona y cola, según el punto 5. |
 | 4 | `LedStripDriver` | Tiras WS2812B por RMT (ver decisiones abiertas). |
@@ -221,5 +221,5 @@ Cada PR parte de `develop` actualizado, lleva su propia branch y actualiza `READ
 
 - **PWM:** las tiras son WS2812B (un pin de datos por tira), así que su driver es RMT, no PWM. Un `PwmDriver` solo haría falta para otro uso (por ejemplo atenuar la retroiluminación de la pantalla, que hoy va fija a 5 V). Pendiente decidir si se mantiene en el plan.
 - **Orden del PR 0:** se propone hacer el refactor antes de agregar drivers nuevos. Confirmar.
-- **Tabla de particiones:** los tamaños del punto 8 son una propuesta, no están medidos.
+- **Tabla de particiones:** ya está en `Sw/partitions.csv` y compila, pero los tamaños (3 MB por slot de OTA, 4 MB de `storage`) siguen siendo una estimación hasta tener los recursos reales.
 - **Licencia del proyecto:** sigue sin definirse y aparece como "Por definir" en los headers.
