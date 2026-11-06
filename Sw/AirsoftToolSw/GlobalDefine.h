@@ -83,6 +83,10 @@
 #define C_TIMER_RESOLUTION_HZ   1000000  /* 1 MHz: cada cuenta del timer es 1 us */
 #define C_TIMER_ALARM_COUNT     ((C_TIMER_RESOLUTION_HZ / 1000) * C_TIMER_PERIOD_MS)
 
+/* ---- Almacenamiento en flash (NVS) ---- */
+#define C_FLASH_NAMESPACE        "airsoft"  /* espacio de nombres de NVS */
+#define C_FLASH_KEY_MAX_LENGTH   15         /* largo maximo de una clave de NVS */
+
 /* ---- Conversiones y limites ---- */
 #define C_HZ_PER_MHZ      1000000UL
 #define C_BYTES_PER_KB    1024
