@@ -1,4 +1,4 @@
-# Esquemático v0.6
+# Esquemático v0.7
 
 Esquemático de la herramienta, pensado para armarse con módulos comerciales. Todo es igual en las dos variantes menos la alimentación.
 
@@ -26,8 +26,9 @@ Las conexiones se hacen por etiqueta de red. Dos etiquetas con el mismo nombre s
 | 45 | I2S_LRC | selección de canal; pin de arranque, solo carga una entrada de alta impedancia |
 | 0 | I2S_DIN | datos de audio; pin de arranque (botón BOOT de la tarjeta), solo carga una entrada de alta impedancia |
 | 10 | VBAT_ADC | ADC1, divisor 1:2 |
+| 43 | LED_ESTADO | LED verde D5 con R21 a GND; es U0TXD, ver la sección LED de estado |
 
-Libres: GPIO43/44 (UART de depuración). Se evitó usarlos para I2S porque el puente USB-UART de la tarjeta maneja GPIO44 y chocaría con la salida de datos. No usar: GPIO19/20 (USB nativo) ni GPIO35 a 37 (PSRAM octal).
+Libre: GPIO44 (U0RXD). El puente USB-UART de la tarjeta lo maneja como salida, por eso no se usa. GPIO43 (U0TXD) pasó al LED de estado en v0.7. No usar: GPIO19/20 (USB nativo) ni GPIO35 a 37 (PSRAM octal).
 
 LCD_RD queda fijo en alto con R1. Si hace falta leer el ID del controlador (ILI9486 o ST7796U, cambia según el lote) se mueve a un pin libre.
 
@@ -38,6 +39,18 @@ Todas las entradas digitales tienen pull-up externo de 10k a 3.3 V y el firmware
 No llevan pull-up las filas del teclado, porque son salidas. Tampoco GPIO1 y GPIO2: además de LCD_RS y LCD_WR leen el touch por ADC, y una resistencia a 3.3 V movería la medición. Las demás líneas de la pantalla, el I2S y los datos de las tiras LED son salidas. De los pines de arranque, GPIO0 es salida (I2S_DIN) y la tarjeta ya trae el botón BOOT en esa línea; GPIO46 lleva pull-down (R9) a propósito, igual que GPIO3 (R6), para que las tiras no reciban basura mientras arranca el micro; GPIO45 no debe llevar pull-up, porque en alto durante el arranque fija el voltaje de la flash en 1.8 V y la N16R8 trabaja a 3.3 V. RST de la tarjeta ya tiene su pull-up y su capacitor en el DevKit.
 
 Al escanear el teclado conviene que las filas no seleccionadas queden en alta impedancia o en open-drain. Si quedan en alto push-pull, dos teclas de la misma columna presionadas a la vez ponen en corto una fila en alto con la fila en bajo.
+
+## LED de estado
+
+D5 es un LED verde de 5 mm difuso (verde estándar, unos 2.1 V de caída) conectado de GPIO43 a GND a través de R21 de 330 Ω. Es activo en alto y toma (3.3 − 2.1) / 330 = 3.6 mA, poco para el pin y suficiente para un indicador en interior. Al sol puede quedarse corto; si hace falta más brillo, R21 baja a 150 Ω (8 mA). R21 usa el mismo valor que R5 y R8.
+
+GPIO43 es U0TXD, la salida de la UART0. En el diseño no tiene otro uso. En el DevKitC-1 va también a la entrada RX del puente USB-UART de la tarjeta, que es una entrada, así que el LED no choca eléctricamente con nada. Sí hay efectos que debe conocer el firmware.
+
+La ROM imprime los mensajes de arranque por U0TXD antes de que corra el firmware, así que el LED parpadea unos cientos de milisegundos al encender o después de cada reset. Mientras la UART está en reposo la línea queda en alto, de modo que el LED se ve encendido en ese tramo.
+
+ESP-IDF manda la consola (ESP_LOGx y printf) a UART0 por omisión. Al configurar GPIO43 como GPIO la consola deja de salir por el conector UART de la tarjeta. Hay que pasarla al USB nativo (`CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y` en `Sw/sdkconfig.defaults`) y conectar la tarjeta por su conector USB, o desactivarla. Grabar por el conector UART sigue funcionando, con el LED parpadeando durante la carga.
+
+GPIO43 no es pin de arranque. El firmware lo tiene como `C_PIN_LED_ESTADO` en `Sw/AirsoftToolSw/GlobalDefine.h`.
 
 ## Alimentación
 
@@ -78,7 +91,7 @@ En picos el amplificador puede pedir unos 0.8 A a 5 V. Con la opción A el módu
 
 ## Lista de materiales
 
-Lista de la opción A. El Excel `lista_materiales_v0.6.xlsx` trae las dos opciones en hojas separadas, con subtotales y totales calculados. Precios aproximados en MXN y sin verificar en tienda, salvo el de M1 ($278.10 en la captura de Roy). Mercado Libre y Amazon MX no permiten lectura automática.
+Lista de la opción A. El Excel `lista_materiales_v0.7.xlsx` trae las dos opciones en hojas separadas, con subtotales y totales calculados. Precios aproximados en MXN y sin verificar en tienda, salvo el de M1 ($278.10 en la captura de Roy). Mercado Libre y Amazon MX no permiten lectura automática.
 
 | Cant. | Referencia | Pieza | Precio aprox. c/u |
 | --- | --- | --- | --- |
@@ -92,19 +105,20 @@ Lista de la opción A. El Excel `lista_materiales_v0.6.xlsx` trae las dos opcion
 | 1 | SW3 | Push button de panel 16 a 22 mm | 40 |
 | 1 | DS2, DS3 | Tira WS2812B 5 V, 60 LEDs/m, IP65, rollo de 1 m (dos tramos de 15 LEDs) | 180 (estimado) |
 | 1 | U5 | 74AHCT125 DIP-14 (SN74AHCT125N); el 74HCT125 también sirve | 30 (estimado) |
+| 1 | D5 | LED verde 5 mm difuso, Vf ~2.1 V (LED de estado) | 2 (estimado) |
 | 2 | sin ref. | Par de conectores JST SM de 3 pines con cable | 10 |
 | 1 | U4 | Módulo amplificador I2S MAX98357A | 90 (estimado) |
 | 1 | LS1 | Bocina 4 Ω, 3 a 5 W, cono de 40 a 57 mm | 60 (estimado) |
 | 8 | R1, R2, R3, R4, R17, R18, R19, R20 | 10k | 1 |
-| 2 | R5, R8 | 330 Ω | 1 |
+| 3 | R5, R8, R21 | 330 Ω | 1 |
 | 4 | R6, R9, R13, R14 | 100k | 1 |
 | 4 | C1, C2, C4, C7 | 100 nF | 2 |
 | 1 | C3 | 470 µF 10 V electrolítico | 8 |
 | 1 | C8 | 1000 µF 10 V electrolítico | 12 |
 
-Total aproximado de la opción A: 1,725 MXN por unidad sin gabinete.
+Total aproximado de la opción A: 1,728 MXN por unidad sin gabinete.
 
-La opción B cambia M1 por portapilas (35), TP4056 (35), interruptor de encendido (15), MT3608 (8), L1 (12), C5 y C6 (10), D4 (5), R15 (1) y R16 (1), para un total aproximado de 1,569 MXN. En las dos opciones el cambio a tiras suma unos 222 MXN.
+La opción B cambia M1 por portapilas (35), TP4056 (35), interruptor de encendido (15), MT3608 (8), L1 (12), C5 y C6 (10), D4 (5), R15 (1) y R16 (1), para un total aproximado de 1,572 MXN. En las dos opciones el cambio a tiras suma unos 222 MXN.
 
 Precios confirmados para comparar: ESP32 DevKit V1 (WROOM-32) a 199 en Steren y 130 + IVA en Teknomovo; Raspberry Pi Pico 2 W a 208 en 330ohms. El análisis completo de la elección del micro está en el documento del paso 1.
 
