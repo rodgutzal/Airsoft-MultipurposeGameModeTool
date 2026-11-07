@@ -253,7 +253,7 @@ mcu_nets = {
     "10": "LCD_D6", "11": "LCD_D7", "12": "KEY_C1", "13": "LED_TIRA1", "14": "LED_TIRA2",
     "15": "KEY_C2", "16": "VBAT_ADC", "17": "KEY_F1", "18": "KEY_F2", "19": "KEY_F3",
     "20": "KEY_F4", "21": "+5V", "22": "GND",
-    "23": "GND", "24": None, "25": None, "26": "LCD_RS", "27": "LCD_WR", "28": "LCD_CS",
+    "23": "GND", "24": "LED_ESTADO", "25": None, "26": "LCD_RS", "27": "LCD_WR", "28": "LCD_CS",
     "29": "LCD_RST", "30": "I2S_BCLK", "31": "KEY_C4", "32": "KEY_C3", "33": None, "34": None,
     "35": None, "36": "I2S_DIN", "37": "I2S_LRC", "38": "BTN_ACCION", "39": "SW_ARMADO",
     "40": "SW_EQUIPO", "41": None, "42": None, "43": "GND", "44": "GND",
@@ -265,8 +265,12 @@ place(R, "R6", "100k", 27.94, 76.2, {"1": "LED_TIRA1", "2": "GND"})
 place(R, "R9", "100k", 45.72, 76.2, {"1": "LED_TIRA2", "2": "GND"})
 text("Pull-downs de los datos", 15, 92)
 text("de las tiras LED.", 15, 95)
+place(R, "R21", "330", 35.56, 45.72, {"1": "LED_ESTADO", "2": "LED_ESTADO_A"}, rot=90, ref_at=(0, -2.54, 1), val_at=(0, 2.54, 1))
+place(LED, "D5", "Verde 5 mm", 76.2, 45.72, {"1": "GND", "2": "LED_ESTADO_A"}, ref_at=(0, -3.81, 1), val_at=(0, 3.81, 1))
+text("LED de estado en GPIO43 (U0TXD),", 55, 55)
+text("activo en alto, ~3.6 mA.", 55, 58)
 text("GPIO1 y GPIO2 son ADC1: leen el touch resistivo compartido con LCD_RS y LCD_WR.", 83, 112)
-text("GPIO35-37 los usa la PSRAM octal. GPIO19/20 son el USB nativo. GPIO43/44 quedan para depuracion.", 83, 115)
+text("GPIO35-37 los usa la PSRAM octal. GPIO19/20 son el USB nativo. GPIO43 (U0TXD) maneja D5; GPIO44 libre (lo maneja el puente USB-UART).", 83, 115)
 text("GPIO0, GPIO45 y GPIO46 son pines de arranque: solo llevan entradas de alta impedancia (DIN, LRC y la entrada de U5 con 100k a GND).", 83, 118)
 text("GPIO48 maneja el LED RGB de la tarjeta v1.1: el boton solo lo lee como entrada.", 83, 121)
 text("Toda entrada digital lleva pull-up externo de 10k. GPIO45 no debe llevar pull-up: en alto el arranque fija la flash a 1.8 V.", 83, 124)
@@ -393,8 +397,8 @@ out = f"""(kicad_sch (version 20230121) (generator eeschema)
   (paper "A3")
   (title_block
     (title "Herramienta multiproposito para airsoft")
-    (date "2026-11-04")
-    (rev "v0.6-{VARIANT}")
+    (date "2026-11-07")
+    (rev "v0.7-{VARIANT}")
     (comment 1 "Esquematico v1: ESP32-S3-DevKitC-1 + TFT 3.5in paralela")
     (comment 2 "Modos: bandera, zona, rey de la colina, bomba, extraccion")
     (comment 4 "{POWER_NOTE}")

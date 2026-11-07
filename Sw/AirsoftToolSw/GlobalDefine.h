@@ -55,6 +55,9 @@
 #define C_PIN_TIRA_LED_1  3   /* pin de arranque, pull-down de 100k (R6) */
 #define C_PIN_TIRA_LED_2  46  /* pin de arranque, pull-down de 100k (R9) */
 
+/* ---- LED de estado (D5 verde, R21 de 330 ohm, activo en alto) ---- */
+#define C_PIN_LED_ESTADO  43  /* U0TXD: sacar la consola de UART0 */
+
 /* ---- Audio I2S (MAX98357A) ---- */
 #define C_PIN_I2S_BCLK    40
 #define C_PIN_I2S_LRC     45  /* pin de arranque */
