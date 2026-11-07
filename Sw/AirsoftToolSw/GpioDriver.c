@@ -120,3 +120,22 @@ esp_err_t ConfigGpioAsInput(int pin)
 
   return err;
 }
+
+/**
+ * Nombre:      SetGpioLevel
+ * Descripcion: Fija el nivel de un GPIO ya configurado como salida. No escribe
+ *              en el log, por lo que se puede llamar dentro del ciclo de 5 ms.
+ * Entradas:    pin   - numero de GPIO.
+ *              level - nivel (0 = bajo, distinto de 0 = alto).
+ * Salidas:     ESP_OK si se fijo el nivel.
+ *              ESP_ERR_INVALID_ARG si el pin no existe o esta reservado.
+ */
+esp_err_t SetGpioLevel(int pin, int level)
+{
+  if(IsGpioPinUsable(pin) == C_FALSE)
+  {
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  return gpio_set_level((gpio_num_t)pin, (level != C_FALSE) ? C_TRUE : C_FALSE);
+}

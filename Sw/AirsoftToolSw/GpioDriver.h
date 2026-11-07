@@ -18,5 +18,6 @@
 
 esp_err_t ConfigGpioAsOutput(int pin, int level);
 esp_err_t ConfigGpioAsInput(int pin);
+esp_err_t SetGpioLevel(int pin, int level);
 
 #endif /* GPIO_DRIVER_H */

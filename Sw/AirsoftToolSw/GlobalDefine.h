@@ -66,6 +66,9 @@
 /* ---- Bateria ---- */
 #define C_PIN_VBAT_ADC    10  /* divisor 1:2 */
 
+/* ---- LED de estado D5 (verde, R21 a GND), usado como heartbeat ---- */
+#define C_PIN_LED_ESTADO  43  /* TX de UART0: la consola va por el USB-Serial-JTAG */
+
 /* ---- Cuentas y tamanos ---- */
 #define C_KEY_ROWS        4
 #define C_KEY_COLS        4
@@ -85,6 +88,10 @@
 #define C_TIMER_PERIOD_MS       5        /* periodo de la interrupcion */
 #define C_TIMER_RESOLUTION_HZ   1000000  /* 1 MHz: cada cuenta del timer es 1 us */
 #define C_TIMER_ALARM_COUNT     ((C_TIMER_RESOLUTION_HZ / 1000) * C_TIMER_PERIOD_MS)
+
+/* ---- Heartbeat: ciclo completo de 1 s (0.5 s encendido, 0.5 s apagado) ---- */
+#define C_HEARTBEAT_PERIOD_MS   1000
+#define C_HEARTBEAT_HALF_TICKS  (C_HEARTBEAT_PERIOD_MS / 2 / C_TIMER_PERIOD_MS)
 
 /* ---- Almacenamiento en flash (NVS) ---- */
 #define C_FLASH_NAMESPACE        "airsoft"  /* espacio de nombres de NVS */

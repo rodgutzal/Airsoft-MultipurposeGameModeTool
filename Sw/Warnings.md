@@ -2,7 +2,7 @@
 
 Registro de los warnings que salen al compilar, para corregirlos y llevar su trazabilidad. Se actualiza en cada compilación previa a un commit.
 
-Compilador: ESP-IDF v6.1, target esp32s3. Última revisión: 2026-11-02, branch `b#2_ProyectoBaseEspIdf`.
+Compilador: ESP-IDF v6.1, target esp32s3. Última revisión: 2026-11-07, branch `b#12_Heartbeat`. Siguen solo los 5 warnings externos de ESP-IDF.
 
 ## Abiertos
 

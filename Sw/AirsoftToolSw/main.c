@@ -14,6 +14,7 @@
 #define C_RAM_EXPOSE_GLOBALS
 #include "Ram.h"
 #include "MainProcess.h"
+#include "HeartbeatDriver.h"
 #include "TimerDriver.h"
 
 /**
@@ -38,7 +39,8 @@ void app_main(void)
   {
     TimerWaitMainTick();
 
-    /* Aqui van las subrutinas del ciclo principal, una vez cada C_TIMER_PERIOD_MS. */
+    /* Subrutinas del ciclo principal, una vez cada C_TIMER_PERIOD_MS. */
+    HeartbeatTick();
 
     TimerEndMainTick();
   }

@@ -76,6 +76,7 @@ Reglas de la figura: una flecha hacia abajo es "usa". Ningún driver lee ni escr
 | `GpioDriver` | Pines de entrada y salida | `esp_driver_gpio` | Hecho |
 | `TimerDriver` | Interrupción periódica de 5 ms | `esp_driver_gptimer` | Hecho; cumple R1 a R3 |
 | `FlashDriver` | Configuración y estadísticas en flash | `nvs_flash` / particiones | Hecho |
+| `HeartbeatDriver` | LED de verificación del ciclo principal (GPIO43, ciclo de 1 s) | `GpioDriver` | Hecho |
 | `WatchdogDriver` | Watchdog de tareas y de interrupciones | `esp_task_wdt` | Pendiente |
 | `DmaDriver` | Buffers aptos para DMA, copia asíncrona y cola de transferencias | `heap_caps`, `esp_async_memcpy` | Pendiente |
 | `LedStripDriver` | Dos tiras WS2812B (GPIO 3 y 46) | `esp_driver_rmt` | Pendiente |
