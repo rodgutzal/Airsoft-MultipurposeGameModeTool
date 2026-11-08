@@ -19,5 +19,11 @@ CONFIG_PM_ENABLE=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 
+# Consola por el USB-Serial-JTAG (puerto USB de la tarjeta): libera GPIO43/44
+# del UART0. GPIO43 maneja el LED de heartbeat (C_PIN_LED_ESTADO), asi que
+# tampoco se deben escribir logs de la ROM por ese pin.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+CONFIG_BOOT_ROM_LOG_ALWAYS_OFF=y
+
 # La ISR del timer sigue viva mientras se escribe o borra la flash
 CONFIG_GPTIMER_ISR_IRAM_SAFE=y

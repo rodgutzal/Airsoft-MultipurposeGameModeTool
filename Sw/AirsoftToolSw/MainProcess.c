@@ -21,6 +21,7 @@
 #include "ClockDriver.h"
 #include "FlashDriver.h"
 #include "GpioDriver.h"
+#include "HeartbeatDriver.h"
 #include "TimerDriver.h"
 
 static const char *TAG = "MainProcess";
@@ -64,7 +65,8 @@ void InitSimpleGpioPorts(void)
  * Descripcion: Imprime los datos del chip (nucleos, revision, flash, PSRAM) y
  *              ejecuta la secuencia de arranque: reloj (ClockDriver), puertos
  *              simples, almacenamiento en flash (FlashInit; si falla solo se
- *              avisa y el firmware sigue sin guardar datos) y timer periodico
+ *              avisa y el firmware sigue sin guardar datos), LED de heartbeat
+ *              (HeartbeatInit; si falla solo se avisa) y timer periodico
  *              (TimerInit y TimerStart).
  * Entradas:    Ninguna.
  * Salidas:     Ninguna (escribe en el log).
@@ -87,6 +89,11 @@ void InitMainProcess(void)
   if(FlashInit() != ESP_OK)
   {
     ESP_LOGE(TAG, "Sin almacenamiento en flash: los datos no se guardaran");
+  }
+
+  if(HeartbeatInit() != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Sin LED de heartbeat: el firmware sigue sin indicador");
   }
 
   ESP_ERROR_CHECK(TimerInit());

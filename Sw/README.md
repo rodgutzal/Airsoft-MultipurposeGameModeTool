@@ -2,7 +2,7 @@
 
 Firmware de la herramienta, con ESP-IDF v6.1 para el ESP32-S3-DevKitC-1 N16R8.
 
-Estado actual: proyecto base. Al arrancar inicializa la RAM, fija el reloj del CPU a 240 MHz con el `ClockDriver`, configura los puertos simples e inicia un timer de 5 ms que gobierna el ciclo principal. Las subrutinas del ciclo todavía no existen; el espacio está marcado en `main.c`. No se ha flasheado en la placa: solo se comprobó que compila.
+Estado actual: proyecto base. Al arrancar inicializa la RAM, fija el reloj del CPU a 240 MHz con el `ClockDriver`, configura los puertos simples e inicia un timer de 5 ms que gobierna el ciclo principal. La única subrutina del ciclo es el heartbeat (LED en GPIO43, ciclo de 1 s); las demás todavía no existen y su espacio está marcado en `main.c`. La consola va por el puerto USB (USB-Serial-JTAG), no por el UART. No se ha flasheado en la placa: solo se comprobó que compila.
 
 ## Arquitectura
 
@@ -14,7 +14,7 @@ flowchart TB
     MAIN["main.c<br/>app_main y ciclo principal"]
     MP["MainProcess<br/>procesos base"]
     RAM["Ram<br/>variables globales"]
-    DRV["Drivers propios<br/>ClockDriver, FlashDriver, GpioDriver, TimerDriver"]
+    DRV["Drivers propios<br/>ClockDriver, FlashDriver, GpioDriver, HeartbeatDriver, TimerDriver"]
     GD["GlobalDefine.h<br/>constantes y tipos"]
   end
   subgraph IDF["ESP-IDF v6.1"]
@@ -64,7 +64,8 @@ El código vive en `AirsoftToolSw/` (declarado como componente en `CMakeLists.tx
 | `Ram.c` / `Ram.h` | Modelo de la aplicación (`gTeam`, `gArmed`, `gActionButton`, `gKeyPressed`) e `InitRam`. |
 | `MainProcess.c` / `.h` | Secuencia de arranque: `InitMainProcess` (reloj, puertos simples, almacenamiento en flash y timer) e `InitSimpleGpioPorts`. |
 | `ClockDriver.c` / `.h` | Reloj del CPU: `ConfigCpuClock` (240 MHz por PLL con `esp_pm`) y `VerifyCpuClockFrequency`. |
-| `GpioDriver.c` / `.h` | `ConfigGpioAsOutput` y `ConfigGpioAsInput`, con validación de pin. |
+| `GpioDriver.c` / `.h` | `ConfigGpioAsOutput`, `ConfigGpioAsInput` y `SetGpioLevel`, con validación de pin. |
+| `HeartbeatDriver.c` / `.h` | LED de heartbeat en `C_PIN_LED_ESTADO` (GPIO43): `HeartbeatInit` y `HeartbeatTick`. Se llama una vez por periodo de 5 ms y el LED cambia cada `C_HEARTBEAT_HALF_TICKS` (100 periodos = 0.5 s), así que el ciclo completo dura `C_HEARTBEAT_PERIOD_MS` (1 s). Si el ciclo principal se atasca, el LED se queda fijo. No escribe en el log. |
 | `FlashDriver.c` / `.h` | Almacenamiento persistente en flash (NVS) bajo el espacio de nombres `C_FLASH_NAMESPACE`: `FlashInit`, `FlashReadU32` / `FlashWriteU32`, `FlashReadBlob` / `FlashWriteBlob` y `FlashEraseAll`. Las escrituras son bloqueantes (decenas de ms): no se llaman dentro de las subrutinas del ciclo de 5 ms. |
 | `partitions.csv` | Tabla de particiones propia (ver Configuración). |
 | `TimerDriver.c` / `.h` | Timer periódico de 5 ms (GPTimer): `TimerInit`, `TimerStart`, `TimerWaitMainTick`, `TimerEndMainTick`, `TimerGetSystemTickMs` y `TimerGetOverrunCount`. La bandera `u8MainFlag` (bit `bf_5MsMainLoopFlag`), los contadores, la notificación y la ISR son privados del driver. |
@@ -80,6 +81,7 @@ flowchart LR
   main_c["main.c"] --> Ram_h["Ram.h"]
   main_c --> MainProcess_h["MainProcess.h"]
   main_c --> TimerDriver_h["TimerDriver.h"]
+  main_c --> HeartbeatDriver_h["HeartbeatDriver.h"]
   Ram_h --> GlobalDefine_h["GlobalDefine.h"]
   Ram_c["Ram.c"] --> Ram_h
   MainProcess_c["MainProcess.c"] --> MainProcess_h
@@ -93,11 +95,15 @@ flowchart LR
   MainProcess_c --> GpioDriver_h["GpioDriver.h"]
   GpioDriver_c["GpioDriver.c"] --> GpioDriver_h
   GpioDriver_c --> Ram_h
+  MainProcess_c --> HeartbeatDriver_h
+  HeartbeatDriver_c["HeartbeatDriver.c"] --> HeartbeatDriver_h
+  HeartbeatDriver_c --> Ram_h
+  HeartbeatDriver_c --> GpioDriver_h
   TimerDriver_c["TimerDriver.c"] --> TimerDriver_h
   TimerDriver_c --> Ram_h
 ```
 
-Ningún driver usa variables de `Ram`: `ClockDriver`, `FlashDriver`, `GpioDriver` y `TimerDriver` incluyen `Ram.h` solo para las constantes `C_*` y las uniones. `main.c` y `Ram.c` definen `C_RAM_EXPOSE_GLOBALS` para ver las variables.
+Ningún driver usa variables de `Ram`: `ClockDriver`, `FlashDriver`, `GpioDriver`, `HeartbeatDriver` y `TimerDriver` incluyen `Ram.h` solo para las constantes `C_*` y las uniones. `main.c` y `Ram.c` definen `C_RAM_EXPOSE_GLOBALS` para ver las variables.
 
 ## Diagrama de clases UML
 
@@ -164,7 +170,15 @@ classDiagram
     <<module>>
     +ConfigGpioAsOutput(pin, level) esp_err_t
     +ConfigGpioAsInput(pin) esp_err_t
+    +SetGpioLevel(pin, level) esp_err_t
     -IsGpioPinUsable(pin) bool
+  }
+  class HeartbeatDriver {
+    <<module>>
+    +HeartbeatInit() esp_err_t
+    +HeartbeatTick() void
+    -sTickCount uint32_t
+    -sLedLevel int
   }
   class TimerDriver {
     <<module>>
@@ -188,9 +202,13 @@ classDiagram
   Main ..> Ram : usa
   Main ..> MainProcess : usa
   Main ..> TimerDriver : espera el periodo
+  Main ..> HeartbeatDriver : HeartbeatTick cada 5 ms
   MainProcess ..> ClockDriver : usa
   MainProcess ..> FlashDriver : usa
   MainProcess ..> GpioDriver : usa
+  MainProcess ..> HeartbeatDriver : HeartbeatInit
+  HeartbeatDriver ..> GpioDriver : ConfigGpioAsOutput / SetGpioLevel
+  HeartbeatDriver ..> Ram : usa constantes
   FlashDriver ..> Ram : usa constantes
   MainProcess ..> TimerDriver : usa
   MainProcess ..> Ram : usa constantes
@@ -210,6 +228,7 @@ sequenceDiagram
   participant Clk as ClockDriver
   participant Gpio as GpioDriver
   participant Fl as FlashDriver
+  participant Hb as HeartbeatDriver
   participant Tim as TimerDriver
   IDF->>Main: arranque, CPU a 240 MHz
   Main->>Ram: InitRam()
@@ -223,6 +242,9 @@ sequenceDiagram
   MP->>Fl: FlashInit()
   Note over Fl: nvs_flash_init; si la particion esta llena<br/>o es de otra version, la borra y la crea
   Fl-->>MP: esp_err_t (si falla solo se avisa)
+  MP->>Hb: HeartbeatInit()
+  Note over Hb: configura GPIO43 como salida, LED apagado
+  Hb-->>MP: esp_err_t (si falla solo se avisa)
   MP->>Tim: TimerInit()
   MP->>Tim: TimerStart()
   Tim-->>MP: esp_err_t
@@ -247,7 +269,7 @@ sequenceDiagram
     end
     ISR->>L: notificación a la tarea que espera
     L->>L: TimerWaitMainTick() regresa
-    L->>L: ejecuta las subrutinas
+    L->>L: ejecuta las subrutinas (HeartbeatTick)
     L->>S: TimerEndMainTick() apaga bf_5MsMainLoopFlag
   end
 ```
@@ -257,7 +279,7 @@ Flujo del ciclo principal:
 ```mermaid
 flowchart TD
   A(["Inicio del ciclo"]) --> B["TimerWaitMainTick: la tarea duerme<br/>hasta el siguiente periodo de 5 ms"]
-  B --> D["Subrutinas del ciclo<br/>una vez cada 5 ms"]
+  B --> D["Subrutinas del ciclo, una vez cada 5 ms<br/>HeartbeatTick invierte el LED cada 100 periodos"]
   D --> E["TimerEndMainTick"]
   E --> B
 ```
@@ -273,7 +295,8 @@ La bandera es un bit de un byte, y modificarlo es una lectura-modificación-escr
 - CPU a 240 MHz (PLL sobre el cristal de 40 MHz; el oscilador interno RC_FAST de unos 17.5 MHz no se usa como fuente del CPU);
 - `CONFIG_PM_ENABLE`, necesario para `esp_pm_configure` en `ConfigCpuClock`;
 - la tabla de particiones propia `partitions.csv` (`CONFIG_PARTITION_TABLE_CUSTOM`);
-- `CONFIG_GPTIMER_ISR_IRAM_SAFE`: la ISR del timer de 5 ms sigue viva mientras se escribe o borra la flash.
+- `CONFIG_GPTIMER_ISR_IRAM_SAFE`: la ISR del timer de 5 ms sigue viva mientras se escribe o borra la flash;
+- consola por el USB-Serial-JTAG (`CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG`) y log de la ROM apagado (`CONFIG_BOOT_ROM_LOG_ALWAYS_OFF`): así GPIO43 (TX del UART0) queda libre para el LED de heartbeat y no parpadea con los mensajes. Los logs se ven por el puerto USB de la tarjeta, no por el puerto UART.
 
 ### Tabla de particiones
 

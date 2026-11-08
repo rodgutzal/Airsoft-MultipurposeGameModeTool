@@ -4,16 +4,16 @@ Se actualiza antes de cada commit que toque `Sw/`, después de compilar y correr
 
 ## Estado actual
 
-Branch `b#10_FlashDriver`, 2026-11-04.
+Branch `b#12_Heartbeat`, 2026-11-07.
 
 ```
 ROM (Flash)
-  Partición ota_0 de la app (3 MB)  [█░░░░░░░░░░░░░░░░░░░]   6.9 %   usado 218,384 B   libre 2,927,344 B
+  Partición ota_0 de la app (3 MB)  [█░░░░░░░░░░░░░░░░░░░]   7.0 %   usado 219,392 B   libre 2,926,336 B
   Flash asignada a particiones      [█████████████░░░░░░░]  63.3 %   asignado 10.1 MB de 16 MB   reserva 5.9 MB
 
 RAM interna
   DIRAM (datos + código)   [███░░░░░░░░░░░░░░░░░]  17.5 %   usado  59,710 B   libre 282,050 B
-     .text  42,511 B (12.4 %)   .data 14,207 B (4.2 %)   .bss 2,992 B (0.9 %)
+     .text  42,495 B (12.4 %)   .data 13,887 B (4.1 %)   .bss 3,328 B (1.0 %)
   IRAM (código rápido)     [████████████████████] 100.0 %   usado  16,384 B   libre       0 B
   RTC SLOW                 [░░░░░░░░░░░░░░░░░░░░]   0.4 %   usado      36 B   libre   8,156 B
   RTC FAST                 [░░░░░░░░░░░░░░░░░░░░]   0.3 %   usado      24 B   libre   8,168 B
@@ -27,6 +27,8 @@ Notas:
 - El uso de PSRAM no se conoce al compilar, porque el tamaño se detecta al arrancar. Se medirá con las trazas de arranque cuando se flashee.
 - Desde el PR de `FlashDriver` la app vive en una partición `ota_0` de 3 MB (tabla propia en `Sw/partitions.csv`); antes eran 1 MB con la tabla por defecto. Por eso el porcentaje de la columna "Flash app (%)" del historial baja aunque el firmware crece: los porcentajes anteriores están sobre 1 MB.
 - El `FlashDriver` (NVS) y `CONFIG_GPTIMER_ISR_IRAM_SAFE` suman unos 14.6 KB de ROM y 2.1 KB de DIRAM.
+- El HeartbeatDriver suma unos 1 KB de ROM; el cambio de la consola al USB-Serial-JTAG casi no altera la DIRAM.
+
 ## Historial
 
 | Fecha | Commit | Flash app (B) | Flash app (%) | DIRAM (B) | DIRAM (%) | Observación |
@@ -38,4 +40,5 @@ Notas:
 | 2026-11-03 | `6a4793f` | 203,840 | 19.4 | 57,578 | 16.9 | ClockDriver (reloj movido fuera de MainProcess); sin cambio de tamano relevante |
 | 2026-11-04 | `1a59c69` | 203,840 | 19.4 | 57,578 | 16.9 | Los archivos incluyen Ram.h en lugar de GlobalDefine.h (R8) y interruptor C_RAM_EXPOSE_GLOBALS (R1); sin cambio de tamano |
 | 2026-11-04 | `a8a1155` | 203,728 | 19.4 | 57,586 | 16.9 | Refactor de encapsulamiento: TimerDriver con estado privado y API TimerWaitMainTick/TimerEndMainTick; secuencia de arranque unica |
-| 2026-11-04 | este commit (sobre `f79165c`) | 218,384 | 6.9 (de 3 MB) | 59,710 | 17.5 | FlashDriver (NVS), tabla de particiones propia (ota_0 de 3 MB) y CONFIG_GPTIMER_ISR_IRAM_SAFE |
+| 2026-11-04 | `ef6f065` | 218,384 | 6.9 (de 3 MB) | 59,710 | 17.5 | FlashDriver (NVS), tabla de particiones propia (ota_0 de 3 MB) y CONFIG_GPTIMER_ISR_IRAM_SAFE |
+| 2026-11-07 | este commit (sobre `2b3fe5e`) | 219,392 | 7.0 (de 3 MB) | 59,710 | 17.5 | HeartbeatDriver (LED en GPIO43, ciclo de 1 s), SetGpioLevel y consola por USB-Serial-JTAG |
