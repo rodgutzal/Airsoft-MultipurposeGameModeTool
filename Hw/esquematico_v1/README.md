@@ -4,6 +4,8 @@ Esquemático de la herramienta, pensado para armarse con módulos comerciales. T
 
 La opción A usa el módulo LUORNG V8 para dos celdas 18650 (archivo `airsoft_tool.kicad_sch`, vista rápida en `airsoft_tool.pdf`). La opción B es el diseño anterior con TP4056 y MT3608 discretos (archivo `opcion_b/airsoft_tool_opcion_B.kicad_sch`, vista rápida en `opcion_b/airsoft_tool_opcion_B.pdf`). Se construye una sola de las dos.
 
+La opción C (v0.9) cambia los módulos comprados por componentes discretos para una PCB propia: módulo ESP32-S3-WROOM-1 N16R8 sin DevKit, alimentación discreta, MAX98357A suelto y USB-C para grabar y depurar. Está en `opcion_c/`, con su propio README y la lista `lista_materiales_v0.9_opcionC.xlsx`.
+
 Las conexiones se hacen por etiqueta de red. Dos etiquetas con el mismo nombre son el mismo nodo. Los dos esquemáticos se generan con `gen_sch.py salida.kicad_sch bom.csv A` (o `B`; necesita la librería de símbolos de KiCad en `/usr/share/kicad/symbols`); se puede editar a mano en KiCad sin problema, pero si se vuelve a correr el script se sobrescriben esos cambios.
 
 ## Asignación de pines del ESP32-S3-DevKitC-1 N16R8
