@@ -218,14 +218,24 @@ MCU = use_box(
     [(str(i + 23), n) for i, n in enumerate(J3)],
     width=30.48, desc="Tarjeta ESP32-S3-DevKitC-1 v1.1, headers J1 (izq) y J3 (der)",
 )
-TFT_L = ["LCD_RST", "LCD_CS", "LCD_RS", "LCD_WR", "LCD_RD", "LCD_D0", "LCD_D1", "LCD_D2",
-         "LCD_D3", "LCD_D4", "LCD_D5", "LCD_D6", "LCD_D7"]
-TFT_R = ["5V", "3V3", "GND", "SD_SS", "SD_DI", "SD_DO", "SD_SCK"]
+# Conector 2x17 del modulo "3.5' LCD MODULE" (serigrafia de la foto de Roy, 8 nov 2026).
+# Pines impares en la fila de arriba, pares en la de abajo; pin 1 = CS a la izquierda.
+TFT_PINS = ["CS", "RS", "WR", "RD", "RST"] + [f"DB{i}" for i in range(16)] + [
+    "SDCS", "BL", "VDD", "VDD", "GND", "GND", "5V", "MISO", "MOSI", "PEN", "F_CS", "T_CS", "CLK"]
+assert len(TFT_PINS) == 34
 TFT = use_box(
-    "TFT_3.5in_ILI9486_ST7796_UNO_Shield", "DS",
-    [(str(i + 1), n) for i, n in enumerate(TFT_L)],
-    [(str(i + 14), n) for i, n in enumerate(TFT_R)],
-    width=30.48, desc="Shield TFT 3.5in 480x320, bus 8 bits, touch resistivo en RS/WR y datos",
+    "LCD_3.5in_ILI9486_16bit_34p", "DS",
+    [(str(n), TFT_PINS[n - 1]) for n in range(1, 35, 2)],
+    [(str(n), TFT_PINS[n - 1]) for n in range(2, 35, 2)],
+    width=30.48, desc="Modulo TFT 3.5in 480x320 ILI9486, bus 8080 de 16 bits, touch XPT2046 por SPI, conector 2x17",
+)
+EXP = use_box(
+    "MCP23017_SP", "U",
+    [(str(n), f"GPB{n - 1}") for n in range(1, 9)] + [("9", "VDD"), ("10", "VSS"), ("11", "NC"),
+     ("12", "SCL"), ("13", "SDA"), ("14", "NC")],
+    [(str(n), f"GPA{n - 21}") for n in range(21, 29)] + [("20", "INTA"), ("19", "INTB"), ("18", "RESET"),
+     ("17", "A2"), ("16", "A1"), ("15", "A0")],
+    width=25.4, desc="Expansor de 16 E/S por I2C, DIP-28, 3.3 V",
 )
 KEY = use_box("Teclado_4x4", "KP",
               [(str(i + 1), f"F{i+1}") for i in range(4)] + [(str(i + 5), f"C{i+1}") for i in range(4)],
@@ -248,56 +258,78 @@ AMP = use_box("MAX98357A_I2S_3W", "U",
 
 # ---------------------------------------------------------------- microcontrolador
 mcu_nets = {
-    "1": "+3V3", "2": "+3V3", "3": None,
+    "1": "+3V3", "2": "+3V3", "3": "ESP_EN",
     "4": "LCD_D0", "5": "LCD_D1", "6": "LCD_D2", "7": "LCD_D3", "8": "LCD_D4", "9": "LCD_D5",
-    "10": "LCD_D6", "11": "LCD_D7", "12": "KEY_C1", "13": "LED_TIRA1", "14": "LED_TIRA2",
-    "15": "KEY_C2", "16": "VBAT_ADC", "17": "KEY_F1", "18": "KEY_F2", "19": "KEY_F3",
-    "20": "KEY_F4", "21": "+5V", "22": "GND",
-    "23": "GND", "24": "LED_ESTADO", "25": None, "26": "LCD_RS", "27": "LCD_WR", "28": "LCD_CS",
-    "29": "LCD_RST", "30": "I2S_BCLK", "31": "KEY_C4", "32": "KEY_C3", "33": None, "34": None,
-    "35": None, "36": "I2S_DIN", "37": "I2S_LRC", "38": "BTN_ACCION", "39": "SW_ARMADO",
-    "40": "SW_EQUIPO", "41": None, "42": None, "43": "GND", "44": "GND",
+    "10": "LCD_D6", "11": "LCD_D7", "12": "LCD_D8", "13": "LED_TIRA", "14": "TOUCH_MOSI",
+    "15": "LCD_D9", "16": "VBAT_ADC", "17": "LCD_D10", "18": "LCD_D11", "19": "LCD_D12",
+    "20": "LCD_D13", "21": "+5V", "22": "GND",
+    "23": "GND", "24": "LED_ESTADO", "25": None, "26": "LCD_RS", "27": "LCD_WR", "28": "I2C_SCL",
+    "29": "TOUCH_CS", "30": "I2S_BCLK", "31": "I2C_SDA", "32": "TOUCH_CLK", "33": None, "34": None,
+    "35": None, "36": "I2S_DIN", "37": "I2S_LRC", "38": "TOUCH_MISO", "39": "LCD_D15",
+    "40": "LCD_D14", "41": None, "42": None, "43": "GND", "44": "GND",
 }
 frame(10, 25, 215, 128)
 text("MICROCONTROLADOR", 83, 29, 2, True)
 place(MCU, "U1", "ESP32-S3-DevKitC-1 N16R8", 147.32, 76.2, mcu_nets, stub=7.62)
-place(R, "R6", "100k", 27.94, 76.2, {"1": "LED_TIRA1", "2": "GND"})
-place(R, "R9", "100k", 45.72, 76.2, {"1": "LED_TIRA2", "2": "GND"})
-text("Pull-downs de los datos", 15, 92)
-text("de las tiras LED.", 15, 95)
+place(R, "R6", "100k", 27.94, 76.2, {"1": "LED_TIRA", "2": "GND"})
+place(R, "R9", "100k", 45.72, 76.2, {"1": "TOUCH_MOSI", "2": "GND"})
+place(R, "R10", "4.7k", 66.04, 76.2, {"1": "+3V3", "2": "I2C_SDA"})
+place(R, "R11", "4.7k", 83.82, 76.2, {"1": "+3V3", "2": "I2C_SCL"})
+text("R6/R9: pull-downs de arranque", 15, 92)
+text("(GPIO3, GPIO46). R10/R11: I2C.", 15, 95)
 place(R, "R21", "330", 35.56, 45.72, {"1": "LED_ESTADO", "2": "LED_ESTADO_A"}, rot=90, ref_at=(0, -2.54, 1), val_at=(0, 2.54, 1))
 place(LED, "D5", "Verde 5 mm", 76.2, 45.72, {"1": "GND", "2": "LED_ESTADO_A"}, ref_at=(0, -3.81, 1), val_at=(0, 3.81, 1))
 text("LED de estado en GPIO43 (U0TXD),", 55, 55)
 text("activo en alto, ~3.6 mA.", 55, 58)
-text("GPIO1 y GPIO2 son ADC1: leen el touch resistivo compartido con LCD_RS y LCD_WR.", 83, 112)
-text("GPIO35-37 los usa la PSRAM octal. GPIO19/20 son el USB nativo. GPIO43 (U0TXD) maneja D5; GPIO44 libre (lo maneja el puente USB-UART).", 83, 115)
-text("GPIO0, GPIO45 y GPIO46 son pines de arranque: solo llevan entradas de alta impedancia (DIN, LRC y la entrada de U5 con 100k a GND).", 83, 118)
-text("GPIO48 maneja el LED RGB de la tarjeta v1.1: el boton solo lo lee como entrada.", 83, 121)
-text("Toda entrada digital lleva pull-up externo de 10k. GPIO45 no debe llevar pull-up: en alto el arranque fija la flash a 1.8 V.", 83, 124)
+text("Pantalla en bus 8080 de 16 bits (LCD_CAM). Touch XPT2046 por SPI. Teclado, switches, boton, PEN y BL en el expansor U6 por I2C.", 83, 112)
+text("GPIO35-37 los usa la PSRAM octal. GPIO19/20 son el USB nativo. GPIO43 (U0TXD) maneja D5; GPIO44 libre (puente USB-UART).", 83, 115)
+text("GPIO0, GPIO45 y GPIO46 son pines de arranque: solo cargas de alta impedancia; GPIO46 (MOSI) lleva R9 a GND, sin pull-up.", 83, 118)
+text("LED RGB de la tarjeta: GPIO38 en v1.1 (lleva TOUCH_CLK, en reposo bajo, el LED no enciende), GPIO48 en v1.0.", 83, 121)
+text("GPIO45 no debe llevar pull-up: en alto el arranque fija la flash a 1.8 V. Las dos tiras van encadenadas en GPIO3.", 83, 124)
 
 # ---------------------------------------------------------------- pantalla
 frame(225, 25, 405, 95)
-text("PANTALLA TFT 3.5in PARALELA 8 BITS CON TOUCH", 228, 29, 2, True)
-tft_nets = {str(i + 1): n for i, n in enumerate(TFT_L)}
-tft_nets.update({"14": "+5V", "15": None, "16": "GND", "17": None, "18": None, "19": None, "20": None})
-place(TFT, "DS1", "TFT 3.5in 480x320 ILI9486/ST7796U", 289.56, 60.96, tft_nets, stub=7.62)
-place(R, "R1", "10k", 360.68, 50.8, {"1": "+3V3", "2": "LCD_RD"})
-text("LCD_RD fijo en alto (solo escritura).", 345, 70)
-text("Pasar a un GPIO libre para leer el ID", 345, 73)
-text("del driver. 3V3 y microSD sin usar.", 345, 76)
-text("Touch: 4 hilos resistivos multiplexados con RS, WR y dos lineas de datos", 228, 88)
-text("(cuales depende del lote; confirmar con el diagnostico de MCUFRIEND_kbv).", 228, 91)
+text("PANTALLA TFT 3.5in, BUS DE 16 BITS, TOUCH SPI", 228, 29, 2, True)
+tft_nets = {"1": "GND", "2": "LCD_RS", "3": "LCD_WR", "4": "LCD_RD", "5": "ESP_EN"}
+tft_nets.update({str(6 + i): f"LCD_D{i}" for i in range(16)})
+tft_nets.update({"22": "+3V3", "23": "LCD_BL", "24": "+3V3", "25": "+3V3", "26": "GND", "27": "GND",
+                 "28": None, "29": "TOUCH_MISO", "30": "TOUCH_MOSI", "31": "TOUCH_PEN", "32": "+3V3",
+                 "33": "TOUCH_CS", "34": "TOUCH_CLK"})
+place(TFT, "DS1", "LCD 3.5in 480x320 ILI9486 2x17", 275.0, 60.96, tft_nets, stub=7.62)
+place(R, "R1", "10k", 330.2, 50.8, {"1": "+3V3", "2": "LCD_RD"})
+text("Pin 1 = CS (fila de arriba, izquierda).", 340, 36)
+text("Impares arriba, pares abajo.", 340, 39)
+text("El modulo solo acepta bus de 16 bits.", 340, 44)
+text("CS a GND: unico dispositivo en el bus.", 340, 47)
+text("RD fijo en alto con R1 (solo escritura).", 340, 50)
+text("RST al EN de la tarjeta (reset comun).", 340, 53)
+text("VDD (24, 25) a 3V3 del DevKit: sirve con", 340, 58)
+text("J1 del modulo abierto o en corto.", 340, 61)
+text("5V (28) es BL_VDD, sin conectar: la", 340, 64)
+text("retroiluminacion toma 3.3 V por R5.", 340, 67)
+text("BL alto = encendida (U6 GPB4).", 340, 70)
+text("SDCS (22) y F_CS (32) a 3V3: microSD y", 340, 75)
+text("flash comparten el SPI y quedan fuera.", 340, 78)
+text("PEN (31) al expansor U6 (GPB3).", 340, 81)
+text("Logica a 3.3 V, sin traslador.", 340, 86)
 
 # ---------------------------------------------------------------- teclado
 frame(225, 100, 405, 150)
-text("TECLADO 4x4", 228, 104, 2, True)
-place(KEY, "KP1", "Teclado membrana 4x4", 270.0, 127.0,
+text("EXPANSOR I2C Y TECLADO 4x4", 228, 104, 2, True)
+place(KEY, "KP1", "Teclado membrana 4x4", 264.16, 127.0,
       {"1": "KEY_F1", "2": "KEY_F2", "3": "KEY_F3", "4": "KEY_F4",
        "5": "KEY_C1", "6": "KEY_C2", "7": "KEY_C3", "8": "KEY_C4"})
-text("Filas como salidas, columnas como entradas con pull-up externo (R17 a R20).", 290, 106)
-text("El firmware no activa pull-ups internos.", 290, 109)
-for i, (rr, col) in enumerate((("R17", "KEY_C1"), ("R18", "KEY_C2"), ("R19", "KEY_C3"), ("R20", "KEY_C4"))):
-    place(R, rr, "10k", 304.8 + i * 20.32, 130.81, {"1": "+3V3", "2": col})
+exp_nets = {"1": "SW_EQUIPO", "2": "SW_ARMADO", "3": "BTN_ACCION", "4": "TOUCH_PEN", "5": "LCD_BL",
+            "6": None, "7": None, "8": None, "9": "+3V3", "10": "GND", "11": None, "12": "I2C_SCL",
+            "13": "I2C_SDA", "14": None, "15": "GND", "16": "GND", "17": "GND", "18": "EXP_RESET",
+            "19": None, "20": None}
+exp_nets.update({str(21 + i): f"KEY_F{i + 1}" for i in range(4)})
+exp_nets.update({str(25 + i): f"KEY_C{i + 1}" for i in range(4)})
+place(EXP, "U6", "MCP23017-E/SP", 322.58, 125.73, exp_nets, stub=5.08)
+for i, (rr, col) in enumerate((("R17", "KEY_C1"), ("R18", "KEY_C2"), ("R19", "KEY_C3"), ("R20", "KEY_C4"), ("R7", "EXP_RESET"))):
+    place(R, rr, "10k", 365.76 + i * 7.62, 118.11, {"1": "+3V3", "2": col}, ref_at=(2.54, -1.27, 1), val_at=(2.54, 1.27, 1))
+place(C, "C9", "100nF", 381.0, 142.24, {"1": "+3V3", "2": "GND"}, rot=90, ref_at=(0, -2.54, 1), val_at=(0, 2.54, 1))
+text("U6 en 0x20 (A0-A2 a GND). R17-R20: pull-ups de KEY_C1-C4.", 228, 147)
 
 # ---------------------------------------------------------------- entradas de usuario
 frame(10, 135, 215, 200)
@@ -311,22 +343,22 @@ place(PUSH, "SW3", "Push button de accion", 167.64, 149.86, {"1": "BTN_ACCION", 
 place(R, "R4", "10k", 162.56, 170.18, {"1": "+3V3", "2": "BTN_ACCION"})
 place(C, "C1", "100nF", 185.42, 170.18, {"1": "BTN_ACCION", "2": "GND"})
 text("Pull-ups externos de 10k por los cables largos en campo. C1 filtra el rebote del boton (tau = 1 ms).", 13, 192)
-text("Switch cerrado = nivel bajo. SW1 abierto = equipo rojo, cerrado = equipo azul.", 13, 195)
+text("Switch cerrado = nivel bajo. SW1 abierto = equipo rojo, cerrado = equipo azul. Se leen en U6 (GPB0 a GPB2).", 13, 195)
 
 # ---------------------------------------------------------------- salidas
 frame(225, 155, 405, 253)
 text("SALIDAS: TIRAS LED RGB Y AUDIO", 228, 159, 2, True)
 place(BUF, "U5", "74AHCT125", 262.89, 180.34,
-      {"1": "GND", "2": "LED_TIRA1", "3": "TIRA1_5V", "4": "GND", "5": "LED_TIRA2", "6": "TIRA2_5V",
+      {"1": "GND", "2": "LED_TIRA", "3": "TIRA1_5V", "4": "GND", "5": "GND", "6": None,
        "7": "GND", "8": None, "9": "GND", "10": "GND", "11": None, "12": "GND", "13": "GND", "14": "+5V"})
 place(R, "R5", "330", 309.88, 172.72, {"1": "TIRA1_5V", "2": "TIRA1_DIN"}, rot=90, ref_at=(0, -2.54, 1), val_at=(0, 2.54, 1))
-place(R, "R8", "330", 309.88, 193.04, {"1": "TIRA2_5V", "2": "TIRA2_DIN"}, rot=90, ref_at=(0, -2.54, 1), val_at=(0, 2.54, 1))
-place(TIRA, "DS2", "Tira WS2812B 15 LEDs", 360.68, 172.72, {"1": "+5V", "2": "TIRA1_DIN", "3": "GND", "4": None})
+place(R, "R8", "330", 309.88, 193.04, {"1": "TIRA1_DOUT", "2": "TIRA2_DIN"}, rot=90, ref_at=(0, -2.54, 1), val_at=(0, 2.54, 1))
+place(TIRA, "DS2", "Tira WS2812B 15 LEDs", 360.68, 172.72, {"1": "+5V", "2": "TIRA1_DIN", "3": "GND", "4": "TIRA1_DOUT"})
 place(TIRA, "DS3", "Tira WS2812B 15 LEDs", 360.68, 193.04, {"1": "+5V", "2": "TIRA2_DIN", "3": "GND", "4": None})
 place(CP, "C8", "1000uF", 377.19, 182.88, {"1": "+5V", "2": "GND"})
 place(C, "C7", "100nF", 392.43, 182.88, {"1": "+5V", "2": "GND"})
-text("Tiras direccionables WS2812B de 5 V, una por linea de datos (RMT del ESP32-S3). U5 sube los datos de 3.3 V a 5 V. C7 junto a U5.", 228, 207)
-text("R5/R8 de 330 ohm junto a la entrada DIN de cada tira. C8 junto a las tiras. R6/R9 (bloque del micro) mantienen los datos en bajo en el arranque.", 228, 210)
+text("Tiras WS2812B de 5 V encadenadas en una sola linea (GPIO3, RMT): LEDs 0-14 en DS2, 15-29 en DS3. U5 sube el dato a 5 V. C7 junto a U5.", 228, 207)
+text("R5 junto a DIN de DS2, R8 entre DOUT de DS2 y DIN de DS3. C8 junto a las tiras. R6 (bloque del micro) mantiene el dato en bajo al arrancar.", 228, 210)
 text("Supuesto: 15 LEDs por tira (25 cm de tira de 60 LEDs/m). Hasta 0.9 A por tira en blanco; el firmware limita las dos a 600 mA en total.", 228, 213)
 place(AMP, "U4", "MAX98357A I2S", 262.89, 232.41,
       {"1": "+5V", "2": "GND", "3": "+3V3", "4": None, "5": "I2S_DIN", "6": "I2S_BCLK", "7": "I2S_LRC",
@@ -397,9 +429,9 @@ out = f"""(kicad_sch (version 20230121) (generator eeschema)
   (paper "A3")
   (title_block
     (title "Herramienta multiproposito para airsoft")
-    (date "2026-11-07")
-    (rev "v0.7-{VARIANT}")
-    (comment 1 "Esquematico v1: ESP32-S3-DevKitC-1 + TFT 3.5in paralela")
+    (date "2026-11-08")
+    (rev "v0.8-{VARIANT}")
+    (comment 1 "Esquematico v1: ESP32-S3-DevKitC-1 + TFT 3.5in paralela de 16 bits")
     (comment 2 "Modos: bandera, zona, rey de la colina, bomba, extraccion")
     (comment 4 "{POWER_NOTE}")
     (comment 3 "Conexiones por etiqueta de red: etiquetas iguales = mismo nodo")

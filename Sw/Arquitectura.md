@@ -80,7 +80,7 @@ Reglas de la figura: una flecha hacia abajo es "usa". Ningún driver lee ni escr
 | `WatchdogDriver` | Watchdog de tareas y de interrupciones | `esp_task_wdt` | Pendiente |
 | `DmaDriver` | Buffers aptos para DMA, copia asíncrona y cola de transferencias | `heap_caps`, `esp_async_memcpy` | Pendiente |
 | `LedStripDriver` | Dos tiras WS2812B (GPIO 3 y 46) | `esp_driver_rmt` | Pendiente |
-| `DisplayDriver` | TFT 480x320, bus paralelo de 8 bits | `esp_lcd` (i80) | Pendiente; usa `DmaDriver` |
+| `DisplayDriver` | TFT 480x320, bus paralelo de 16 bits | `esp_lcd` (i80) | Pendiente; usa `DmaDriver` |
 | `AudioDriver` | MAX98357A por I2S | `esp_driver_i2s` | Pendiente; usa `DmaDriver` |
 | `KeypadDriver` / `InputDriver` | Teclado 4x4, switches y botón | `GpioDriver` | Pendiente |
 | `AdcDriver` | Voltaje de batería (GPIO 10) | `esp_adc` | Pendiente |
