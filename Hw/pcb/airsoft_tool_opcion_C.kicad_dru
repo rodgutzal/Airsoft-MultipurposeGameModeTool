@@ -1,0 +1,28 @@
+(version 1)
+# Reglas de partida para JLCPCB, 4 capas 1.6 mm, cobre exterior 1 oz e interior 0.5 oz.
+# Valores con margen sobre los minimos publicados en https://jlcpcb.com/capabilities/pcb-capabilities
+
+(rule "Pista minima"
+  (constraint track_width (min 0.127mm)))
+
+(rule "Separacion minima de cobre"
+  (constraint clearance (min 0.127mm)))
+
+(rule "Via minima"
+  (constraint hole_size (min 0.2mm))
+  (constraint via_diameter (min 0.45mm))
+  (constraint annular_width (min 0.125mm)))
+
+(rule "Cobre al borde"
+  (constraint edge_clearance (min 0.3mm)))
+
+(rule "Sin pistas de potencia en capas internas de 0.5 oz"
+  (condition "A.NetClass == 'POTENCIA' && A.Type == 'Track' && (A.Layer == 'In1.Cu' || A.Layer == 'In2.Cu')")
+  (constraint disallow track))
+
+(rule "Par USB"
+  (condition "A.inDiffPair('/USB_D*')")
+  (constraint track_width (opt 0.29mm))
+  (constraint diff_pair_gap (opt 0.2mm))
+  (constraint skew (max 0.5mm)))
+

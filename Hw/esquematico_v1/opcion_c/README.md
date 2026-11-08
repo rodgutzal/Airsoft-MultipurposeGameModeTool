@@ -119,10 +119,14 @@ Lo siguiente no lo pude confirmar con la hoja de datos del fabricante y hay que 
 - MAX98357A: el pull-down interno de SD_MODE y si las entradas DIN y LRCLK tienen resistencias internas que afecten a GPIO0 y GPIO45 al arrancar. Con R23 y R24 de 10k no debería importar.
 - Corrientes de retroiluminación, WiFi y tiras: siguen siendo estimaciones.
 
+## Huellas
+
+Desde la propuesta de PCB v0.1 cada símbolo lleva su huella de KiCad (tabla `FOOTPRINT` en `gen_sch_c.py`), así que el esquemático se puede pasar a la PCB con "Update PCB from Schematic". LS1, la bocina, queda fuera de la placa y se conecta en J4. La propuesta, el proyecto de PCB de partida y las razones de cada huella están en `Hw/pcb/pcb_propuesta_v0.1.md`. Ahí se cambian MCP23017 y 74AHCT125 a SOIC, el portapilas doble por dos sencillos y los switches, el teclado, las tiras y la bocina pasan a conectores; la lista de materiales todavía no refleja esos cambios.
+
 ## Pendientes
 
 - Revisar los puntos de la sección anterior con las hojas de datos.
-- Elegir huellas y hacer el ruteo. Para el TPS61022 seguir el ejemplo de layout de TI (lazo de potencia corto entre SW, VOUT y GND). Respetar la zona de la antena del WROOM-1.
+- Hacer el ruteo (huellas y colocación de partida en `Hw/pcb`). Para el TPS61022 seguir el ejemplo de layout de TI (lazo de potencia corto entre SW, VOUT y GND). Respetar la zona de la antena del WROOM-1.
 - Decidir si el ensamble SMD lo hace JLCPCB o PCBWay: TPS61022 (VQFN de 2x2 mm) y MAX98357A (TQFN de 3x3 mm) no se sueldan con cautín.
 - Firmware: control de GPB5 (SD del amplificador) y lectura de GPB6 (USB presente) en U6; corte por batería baja.
 - Medir consumo real y autonomía en el prototipo.
