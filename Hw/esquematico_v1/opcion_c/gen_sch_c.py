@@ -114,6 +114,47 @@ def use_box(name, ref, left, right, width=25.4, desc=""):
     return lid
 
 
+
+# ---------------------------------------------------------------- huellas (v0.1 de la PCB, ver ../../pcb)
+R0603 = "Resistor_SMD:R_0603_1608Metric"
+C0603 = "Capacitor_SMD:C_0603_1608Metric"
+C0805 = "Capacitor_SMD:C_0805_2012Metric"
+XH2 = "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical"
+XH4 = "Connector_JST:JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical"
+FOOTPRINT = {
+    "U1": "RF_Module:ESP32-S3-WROOM-1",
+    "U2": "Package_SO:SOIC-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.3mm_ThermalVias",
+    "U4": "Package_DFN_QFN:TQFN-16-1EP_3x3mm_P0.5mm_EP1.23x1.23mm_ThermalVias",
+    "U5": "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm",
+    "U6": "Package_SO:SOIC-28W_7.5x17.9mm_P1.27mm",
+    "U7": "Package_TO_SOT_SMD:SOT-23-6",
+    "U8": "Package_DFN_QFN:Texas_RWU0007A_VQFN-7_2x2mm_P0.5mm",
+    "U9": "Package_TO_SOT_SMD:SOT-223-3_TabPin2",
+    "U10": "Package_TO_SOT_SMD:SOT-23-6",
+    "Q1": "Package_SO:TSSOP-8_4.4x3mm_P0.65mm",
+    "Q2": "Package_SO:TSSOP-8_4.4x3mm_P0.65mm",
+    "Q3": "Package_TO_SOT_SMD:SOT-23",
+    "D5": "LED_THT:LED_D5.0mm",
+    "D6": "LED_SMD:LED_0805_2012Metric",
+    "D7": "LED_SMD:LED_0805_2012Metric",
+    "D8": "Diode_SMD:D_SMA",
+    "D9": "Diode_SMD:D_SMA",
+    "L1": "Inductor_SMD:L_Coilcraft_XAL5030-XXX",
+    "J1": "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12",
+    "J2": "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical",
+    "J4": XH2,
+    "DS1": "Connector_PinSocket_2.54mm:PinSocket_2x17_P2.54mm_Vertical",
+    "DS2": XH4, "DS3": XH4,
+    "KP1": "Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical",
+    "SW1": XH2, "SW2": XH2, "SW3": XH2, "SW4": XH2,
+    "SW5": "Button_Switch_SMD:SW_SPST_TL3342", "SW6": "Button_Switch_SMD:SW_SPST_TL3342",
+    "BT1": "Battery:BatteryHolder_MPD_BH-18650-PC2", "BT2": "Battery:BatteryHolder_MPD_BH-18650-PC2",
+    "C3": "Capacitor_SMD:CP_Elec_8x10", "C8": "Capacitor_SMD:CP_Elec_10x10",
+}
+for _r in ("C11", "C13", "C15", "C16", "C17", "C18", "C19", "C20", "C21", "C22", "C23"):
+    FOOTPRINT[_r] = C0805
+OFF_BOARD = {"LS1"}  # la bocina va en el gabinete, se conecta en J4
+
 # ---------------------------------------------------------------- dibujo
 ITEMS = []
 BOM = []
@@ -144,11 +185,22 @@ def place(lid, ref, value, x, y, nets, stub=5.08, rot=0, fields=None, ref_at=Non
     extra = ""
     for k, v in (fields or {}).items():
         extra += f'  (property "{k}" "{v}" (at {x} {y} 0) (effects (font (size 1.27 1.27)) hide))\n'
+    if ref in FOOTPRINT:
+        fp = FOOTPRINT[ref]
+    elif ref.startswith("R"):
+        fp = R0603
+    elif ref.startswith("C"):
+        fp = C0603
+    else:
+        fp = ""
+    if not fp and ref not in OFF_BOARD:
+        print(f"aviso: {ref} sin huella", file=sys.stderr)
+    onb = "no" if ref in OFF_BOARD else "yes"
     ITEMS.append(
-        f'(symbol (lib_id "{lid}") (at {x} {y} {rot}) (unit 1) (in_bom yes) (on_board yes) (dnp no) (uuid {uid()})\n'
+        f'(symbol (lib_id "{lid}") (at {x} {y} {rot}) (unit 1) (in_bom yes) (on_board {onb}) (dnp no) (uuid {uid()})\n'
         f'  (property "Reference" "{ref}" (at {x + ref_at[0]} {y + ref_at[1]} {fa}) (effects (font (size 1.27 1.27)) {rj}))\n'
         f'  (property "Value" "{value}" (at {x + val_at[0]} {y + val_at[1]} {fa}) (effects (font (size 1.27 1.27)) {vj}))\n'
-        f'  (property "Footprint" "" (at {x} {y} 0) (effects (font (size 1.27 1.27)) hide))\n'
+        f'  (property "Footprint" "{fp}" (at {x} {y} 0) (effects (font (size 1.27 1.27)) hide))\n'
         f'  (property "Datasheet" "" (at {x} {y} 0) (effects (font (size 1.27 1.27)) hide))\n'
         f"{extra}"
         f"  {pin_uuids}\n"
