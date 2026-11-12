@@ -30,11 +30,13 @@ static const char *TAG = "TimerDriver";
  * bit es una lectura-modificacion-escritura del byte completo y no es atomica. */
 #define bf_5MsMainLoopFlag  Bits.Bit0  /* la ISR lo enciende cada C_TIMER_PERIOD_MS */
 
-static volatile Union8_t u8MainFlag;
-static volatile uint32_t sSystemTickMs = 0;
-static volatile uint32_t sTickOverrunCount = 0;
-static volatile TaskHandle_t sWaitingTask = NULL;
-static gptimer_handle_t sPeriodicTimer = NULL;
+/* Estado privado del driver. Las variables escritas por la ISR son volatile
+ * porque tambien las lee la tarea principal. */
+static volatile Union8_t u8MainFlag;                /* banderas del ciclo; bit 0 = bf_5MsMainLoopFlag */
+static volatile uint32_t sSystemTickMs = 0;         /* ms desde TimerInit; la ISR suma C_TIMER_PERIOD_MS */
+static volatile uint32_t sTickOverrunCount = 0;     /* periodos en que la bandera seguia encendida */
+static volatile TaskHandle_t sWaitingTask = NULL;   /* tarea que espera en TimerWaitMainTick (la ISR la despierta) */
+static gptimer_handle_t sPeriodicTimer = NULL;      /* handle del GPTimer; NULL hasta que TimerInit lo crea */
 
 /**
  * Nombre:      PeriodicTimerAlarmIsr

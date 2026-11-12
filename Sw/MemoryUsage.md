@@ -4,7 +4,7 @@ Se actualiza antes de cada commit que toque `Sw/`, después de compilar y correr
 
 ## Estado actual
 
-Branch `b#12_Heartbeat`, 2026-11-07.
+Branch `b#13_DocumentacionProyecto`, 2026-11-12.
 
 ```
 ROM (Flash)
@@ -41,4 +41,5 @@ Notas:
 | 2026-11-04 | `1a59c69` | 203,840 | 19.4 | 57,578 | 16.9 | Los archivos incluyen Ram.h en lugar de GlobalDefine.h (R8) y interruptor C_RAM_EXPOSE_GLOBALS (R1); sin cambio de tamano |
 | 2026-11-04 | `a8a1155` | 203,728 | 19.4 | 57,586 | 16.9 | Refactor de encapsulamiento: TimerDriver con estado privado y API TimerWaitMainTick/TimerEndMainTick; secuencia de arranque unica |
 | 2026-11-04 | `ef6f065` | 218,384 | 6.9 (de 3 MB) | 59,710 | 17.5 | FlashDriver (NVS), tabla de particiones propia (ota_0 de 3 MB) y CONFIG_GPTIMER_ISR_IRAM_SAFE |
-| 2026-11-07 | este commit (sobre `2b3fe5e`) | 219,392 | 7.0 (de 3 MB) | 59,710 | 17.5 | HeartbeatDriver (LED en GPIO43, ciclo de 1 s), SetGpioLevel y consola por USB-Serial-JTAG |
+| 2026-11-07 | `1793dca` | 219,392 | 7.0 (de 3 MB) | 59,710 | 17.5 | HeartbeatDriver (LED en GPIO43, ciclo de 1 s), SetGpioLevel y consola por USB-Serial-JTAG |
+| 2026-11-12 | este commit (sobre `53404b2`) | 219,392 | 7.0 (de 3 MB) | 59,710 | 17.5 | Solo comentarios y documentacion (guia de desarrollo, referencia de API, mapa de pines); sin cambio de tamano |

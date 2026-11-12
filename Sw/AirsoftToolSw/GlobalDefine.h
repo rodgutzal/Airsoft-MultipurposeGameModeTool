@@ -16,11 +16,20 @@
 
 #include <stdint.h>
 
-/* No usar: GPIO19/20 (USB nativo), GPIO26-32 (flash), GPIO35-37 (PSRAM octal). */
+/* ATENCION - asignacion de pines desactualizada.
+ * Los pines de este archivo siguen el esquematico v0.7 (pantalla de 8 bits,
+ * teclado y switches en GPIO directos, dos lineas de tira LED). El hardware
+ * v0.8 en adelante usa pantalla de 16 bits, touch por SPI, un expansor I2C
+ * MCP23017 para teclado/switches/boton y una sola linea de tira LED. La
+ * correspondencia punto por punto esta en Sw/MapaPines.md. Hasta que se
+ * migre, estos pines NO coinciden con la placa v0.8 ni con la opcion C. */
+
+/* Pines que el firmware nunca debe configurar (la mascara la valida GpioDriver):
+ * GPIO19/20 (USB nativo), GPIO26-32 (flash) y GPIO35-37 (PSRAM octal). */
 #define C_GPIO_RESERVED_MASK  ((1ULL << 19) | (1ULL << 20) | (0x7FULL << 26) | (0x7ULL << 35))
 
 /* ---- Reloj ---- */
-#define C_CPU_CLOCK_TARGET_MHZ  240  /* maximo del ESP32-S3, desde el PLL (cristal de 40 MHz) */
+#define C_CPU_CLOCK_TARGET_MHZ  240  /* MHz. Maximo del ESP32-S3, desde el PLL (cristal de 40 MHz) */
 
 /* ---- Pantalla TFT, bus paralelo de 8 bits ---- */
 #define C_PIN_LCD_RS      1
@@ -55,8 +64,10 @@
 #define C_PIN_TIRA_LED_1  3   /* pin de arranque, pull-down de 100k (R6) */
 #define C_PIN_TIRA_LED_2  46  /* pin de arranque, pull-down de 100k (R9) */
 
-/* ---- LED de estado (D5 verde, R21 de 330 ohm, activo en alto) ---- */
-#define C_PIN_LED_ESTADO  43  /* U0TXD: sacar la consola de UART0 */
+/* ---- LED de estado (D5 verde, R21 de 330 ohm, activo en alto) ----
+ * Lo maneja HeartbeatDriver. GPIO43 es U0TXD, por eso la consola va por el
+ * USB-Serial-JTAG (sdkconfig.defaults) y no por UART0. */
+#define C_PIN_LED_ESTADO  43
 
 /* ---- Audio I2S (MAX98357A) ---- */
 #define C_PIN_I2S_BCLK    40
@@ -65,9 +76,6 @@
 
 /* ---- Bateria ---- */
 #define C_PIN_VBAT_ADC    10  /* divisor 1:2 */
-
-/* ---- LED de estado D5 (verde, R21 a GND), usado como heartbeat ---- */
-#define C_PIN_LED_ESTADO  43  /* TX de UART0: la consola va por el USB-Serial-JTAG */
 
 /* ---- Cuentas y tamanos ---- */
 #define C_KEY_ROWS        4
@@ -85,13 +93,13 @@
 #define C_KEY_NONE        0xFF  /* ninguna tecla presionada */
 
 /* ---- Timer periodico del ciclo principal (GPTimer) ---- */
-#define C_TIMER_PERIOD_MS       5        /* periodo de la interrupcion */
+#define C_TIMER_PERIOD_MS       5        /* ms. Periodo de la interrupcion y del ciclo principal */
 #define C_TIMER_RESOLUTION_HZ   1000000  /* 1 MHz: cada cuenta del timer es 1 us */
-#define C_TIMER_ALARM_COUNT     ((C_TIMER_RESOLUTION_HZ / 1000) * C_TIMER_PERIOD_MS)
+#define C_TIMER_ALARM_COUNT     ((C_TIMER_RESOLUTION_HZ / 1000) * C_TIMER_PERIOD_MS)  /* cuentas por periodo: 1000 cuentas/ms x 5 ms = 5000 */
 
 /* ---- Heartbeat: ciclo completo de 1 s (0.5 s encendido, 0.5 s apagado) ---- */
-#define C_HEARTBEAT_PERIOD_MS   1000
-#define C_HEARTBEAT_HALF_TICKS  (C_HEARTBEAT_PERIOD_MS / 2 / C_TIMER_PERIOD_MS)
+#define C_HEARTBEAT_PERIOD_MS   1000  /* ms. Encendido + apagado del LED */
+#define C_HEARTBEAT_HALF_TICKS  (C_HEARTBEAT_PERIOD_MS / 2 / C_TIMER_PERIOD_MS)  /* periodos de 5 ms entre cambios del LED: 1000 / 2 / 5 = 100 */
 
 /* ---- Almacenamiento en flash (NVS) ---- */
 #define C_FLASH_NAMESPACE        "airsoft"  /* espacio de nombres de NVS */

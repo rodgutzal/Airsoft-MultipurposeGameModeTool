@@ -23,8 +23,10 @@
 
 static const char *TAG = "HeartbeatDriver";
 
-static uint32_t sTickCount = 0;
-static int sLedLevel = C_FALSE;
+/* Estado privado del driver. Solo lo toca la tarea del ciclo principal
+ * (HeartbeatInit y HeartbeatTick), por eso no necesita volatile. */
+static uint32_t sTickCount = 0;      /* periodos de 5 ms desde el ultimo cambio del LED */
+static int sLedLevel = C_FALSE;      /* nivel actual del LED: C_TRUE encendido, C_FALSE apagado */
 
 /**
  * Nombre:      HeartbeatInit

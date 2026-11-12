@@ -14,6 +14,9 @@
 #define C_RAM_EXPOSE_GLOBALS
 #include "Ram.h"
 
+/* Definicion de las variables declaradas en Ram.h (ahi estan sus significados
+ * y el responsable de escritura de cada una). Sus valores iniciales los fija
+ * InitRam, no el inicializador de C, para que el reinicio sea explicito. */
 uint8_t  gTeam;
 bool     gArmed;
 bool     gActionButton;

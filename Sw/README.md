@@ -2,7 +2,9 @@
 
 Firmware de la herramienta, con ESP-IDF v6.1 para el ESP32-S3-DevKitC-1 N16R8.
 
-Estado actual: proyecto base. Al arrancar inicializa la RAM, fija el reloj del CPU a 240 MHz con el `ClockDriver`, configura los puertos simples e inicia un timer de 5 ms que gobierna el ciclo principal. La única subrutina del ciclo es el heartbeat (LED en GPIO43, ciclo de 1 s); las demás todavía no existen y su espacio está marcado en `main.c`. La consola va por el puerto USB (USB-Serial-JTAG), no por el UART. No se ha flasheado en la placa: solo se comprobó que compila.
+Documentación: [`GuiaDesarrollo.md`](GuiaDesarrollo.md) (reglas y flujo de trabajo, empezar por ahí), [`ReferenciaApi.md`](ReferenciaApi.md) (funciones de cada driver), [`MapaPines.md`](MapaPines.md) (pines contra hardware), [`Arquitectura.md`](Arquitectura.md) (diseño objetivo), [`MemoryUsage.md`](MemoryUsage.md) y [`Warnings.md`](Warnings.md) (seguimiento).
+
+Estado actual: proyecto base. Al arrancar inicializa la RAM, fija el reloj del CPU a 240 MHz con el `ClockDriver`, configura los puertos simples e inicia un timer de 5 ms que gobierna el ciclo principal. La única subrutina del ciclo es el heartbeat (LED en GPIO43, ciclo de 1 s); las demás todavía no existen y su espacio está marcado en `main.c`. La consola va por el puerto USB (USB-Serial-JTAG), no por el UART. El pinout de `GlobalDefine.h` es el de v0.7 y el hardware ya es v0.8 o posterior; las diferencias están en [`MapaPines.md`](MapaPines.md). No se ha flasheado en la placa: solo se comprobó que compila.
 
 ## Arquitectura
 
@@ -68,6 +70,9 @@ El código vive en `AirsoftToolSw/` (declarado como componente en `CMakeLists.tx
 | `HeartbeatDriver.c` / `.h` | LED de heartbeat en `C_PIN_LED_ESTADO` (GPIO43): `HeartbeatInit` y `HeartbeatTick`. Se llama una vez por periodo de 5 ms y el LED cambia cada `C_HEARTBEAT_HALF_TICKS` (100 periodos = 0.5 s), así que el ciclo completo dura `C_HEARTBEAT_PERIOD_MS` (1 s). Si el ciclo principal se atasca, el LED se queda fijo. No escribe en el log. |
 | `FlashDriver.c` / `.h` | Almacenamiento persistente en flash (NVS) bajo el espacio de nombres `C_FLASH_NAMESPACE`: `FlashInit`, `FlashReadU32` / `FlashWriteU32`, `FlashReadBlob` / `FlashWriteBlob` y `FlashEraseAll`. Las escrituras son bloqueantes (decenas de ms): no se llaman dentro de las subrutinas del ciclo de 5 ms. |
 | `partitions.csv` | Tabla de particiones propia (ver Configuración). |
+| `GuiaDesarrollo.md` | Guía para mantener el firmware: reglas de código, cómo agregar un driver, flujo de Git y qué documentación actualizar. |
+| `ReferenciaApi.md` | Funciones públicas de cada driver, con su contexto de uso y sus códigos de error. |
+| `MapaPines.md` | Pines del hardware contra las constantes `C_PIN_*`, con las diferencias abiertas. |
 | `TimerDriver.c` / `.h` | Timer periódico de 5 ms (GPTimer): `TimerInit`, `TimerStart`, `TimerWaitMainTick`, `TimerEndMainTick`, `TimerGetSystemTickMs` y `TimerGetOverrunCount`. La bandera `u8MainFlag` (bit `bf_5MsMainLoopFlag`), los contadores, la notificación y la ISR son privados del driver. |
 
 Para agregar un driver nuevo: crear `[nombre]Driver.c` / `.h` y sumarlo a `SRCS` en `AirsoftToolSw/CMakeLists.txt` (y su componente de ESP-IDF a `PRIV_REQUIRES`).
