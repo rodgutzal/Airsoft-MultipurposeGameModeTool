@@ -2,8 +2,7 @@
 """Dibuja las vistas del ruteo (PNG): una por capa de cobre y una combinada.
 
 Uso: python3.12 vistas_pistas.py airsoft_tool_opcion_C.kicad_pcb carpeta_salida
-Genera pistas_combinada.png, pistas_L1_F.Cu.png, pistas_L2_In1.Cu.png,
-pistas_L3_In2.Cu.png y pistas_L4_B.Cu.png. Vista superior en mm (la capa
+Genera pistas_combinada.png, pistas_L1_F.Cu.png y pistas_L2_B.Cu.png. Vista superior en mm (la capa
 inferior se ve a traves de la placa, sin espejar).
 """
 import os
@@ -18,10 +17,8 @@ from matplotlib.collections import LineCollection, PatchCollection
 import pcbnew
 
 CAPAS = [
-    ("L1_F.Cu", pcbnew.F_Cu, "#C83737", "L1 superior (piezas y señales)"),
-    ("L2_In1.Cu", pcbnew.In1_Cu, "#2E8B57", "L2 interna, plano de GND"),
-    ("L3_In2.Cu", pcbnew.In2_Cu, "#C08A00", "L3 interna (alimentación y señales lentas)"),
-    ("L4_B.Cu", pcbnew.B_Cu, "#2F5FB3", "L4 inferior (batería y desborde)"),
+    ("L1_F.Cu", pcbnew.F_Cu, "#C83737", "cara superior F.Cu (piezas, señales y relleno de GND)"),
+    ("L2_B.Cu", pcbnew.B_Cu, "#2F5FB3", "cara inferior B.Cu (tierra casi completa, cruces cortos y batería)"),
 ]
 W, H = 145.0, 80.0
 FIG_W = 14.0  # pulgadas
@@ -105,10 +102,10 @@ def dibujar(board, capas, titulo, out, zonas=True, alfa_zona=0.35):
 def main(pcb, outdir):
     board = pcbnew.LoadBoard(pcb)
     os.makedirs(outdir, exist_ok=True)
-    dibujar(board, CAPAS, "PCB opción C v0.2, ruteo preliminar: las cuatro capas (L1 rojo, L2 verde, L3 ocre, L4 azul)",
+    dibujar(board, CAPAS, "PCB opción C v0.3, 2 capas, ruteo preliminar: ambas caras (superior rojo, inferior azul)",
             os.path.join(outdir, "pistas_combinada.png"), zonas=False)
     for c in CAPAS:
-        dibujar(board, [c], f"PCB opción C v0.2, ruteo preliminar: {c[3]}",
+        dibujar(board, [c], f"PCB opción C v0.3, 2 capas, ruteo preliminar: {c[3]}",
                 os.path.join(outdir, f"pistas_{c[0]}.png"))
 
 

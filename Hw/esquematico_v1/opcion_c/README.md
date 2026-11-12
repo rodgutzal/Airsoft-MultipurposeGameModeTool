@@ -121,7 +121,7 @@ Lo siguiente no lo pude confirmar con la hoja de datos del fabricante y hay que 
 
 ## Huellas
 
-Desde la propuesta de PCB v0.1 cada símbolo lleva su huella de KiCad (tabla `FOOTPRINT` en `gen_sch_c.py`), así que el esquemático se puede pasar a la PCB con "Update PCB from Schematic". LS1, la bocina, queda fuera de la placa y se conecta en J4. La propuesta, el proyecto de PCB de partida y las razones de cada huella están en `Hw/pcb/pcb_propuesta_v0.2.md`. Ahí se cambian MCP23017 y 74AHCT125 a SOIC, el portapilas doble por dos sencillos y los switches, el teclado, las tiras y la bocina pasan a conectores; la lista de materiales todavía no refleja esos cambios.
+Desde la propuesta de PCB v0.1 cada símbolo lleva su huella de KiCad (tabla `FOOTPRINT` en `gen_sch_c.py`), así que el esquemático se puede pasar a la PCB con "Update PCB from Schematic". LS1, la bocina, queda fuera de la placa y se conecta en J4. La propuesta, el proyecto de PCB de partida y las razones de cada huella están en `Hw/pcb/pcb_propuesta_v0.3.md`. Ahí se cambian MCP23017 y 74AHCT125 a SOIC, el portapilas doble por dos sencillos y los switches, el teclado, las tiras y la bocina pasan a conectores; la lista de materiales todavía no refleja esos cambios.
 
 ## Pendientes
 

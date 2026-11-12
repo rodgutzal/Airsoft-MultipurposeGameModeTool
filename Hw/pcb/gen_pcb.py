@@ -6,9 +6,9 @@ Uso (desde Hw/pcb):
       ../esquematico_v1/opcion_c/airsoft_tool_opcion_C.kicad_sch
   python3 gen_pcb.py airsoft_tool_opcion_C.net airsoft_tool_opcion_C.kicad_pcb
 
-Hace: contorno de 145 x 80 mm, 4 capas, huellas colocadas por bloque segun la
-propuesta pcb_propuesta_v0.2.md, redes asignadas a cada pad, contorno del modulo
-LCD en Dwgs.User, plano de GND en In1.Cu y agujeros de montaje M3.
+Hace: contorno de 145 x 80 mm, 2 capas, huellas colocadas por bloque segun la
+propuesta pcb_propuesta_v0.3.md, redes asignadas a cada pad, contorno del modulo
+LCD en Dwgs.User y agujeros de montaje M3. Los rellenos de GND los agrega rutear.py.
 No hace: ruteo, relleno de zonas de potencia, verificacion de pines de la pantalla.
 """
 import re
@@ -133,7 +133,7 @@ def text(board, layer, s, x, y, size=1.5):
 def main(netfile, out):
     comps, nets = parse_netlist(netfile)
     board = pcbnew.BOARD()
-    board.SetCopperLayerCount(4)
+    board.SetCopperLayerCount(2)
 
     netitems = {}
     for name in nets:
@@ -193,22 +193,7 @@ def main(netfile, out):
     text(board, pcbnew.Dwgs_User, "Antena del WROOM-1 fuera del borde: nada metalico a menos de 15 mm", 129, -9, 1.2)
     text(board, pcbnew.Dwgs_User, "BT1/BT2 en la cara inferior", 47, 30, 1.5)
 
-    # plano de GND en In1.Cu (la capa 2 queda solo para GND)
-    gnd = netitems["/GND"]
-    z = pcbnew.ZONE(board)
-    z.SetLayer(pcbnew.In1_Cu)
-    z.SetNet(gnd)
-    z.SetZoneName("GND_L2")
-    ol = z.Outline()
-    ol.NewOutline()
-    for px, py in ((0.3, 0.3), (W - 0.3, 0.3), (W - 0.3, H - 0.3), (0.3, H - 0.3)):
-        ol.Append(mm(px), mm(py))
-    z.SetMinThickness(mm(0.2))
-    z.SetLocalClearance(mm(0.25))
-    z.SetPadConnection(pcbnew.ZONE_CONNECTION_FULL)
-    board.Add(z)
-
-    # reglas basicas (JLCPCB 4 capas, ver la propuesta)
+    # reglas basicas (JLCPCB 2 capas, ver la propuesta)
     ds = board.GetDesignSettings()
     ds.m_TrackMinWidth = mm(0.127)
     ds.m_MinClearance = mm(0.127)

@@ -7,7 +7,7 @@ Pasos:
   3. python3.12 rutear.py ses airsoft_tool_opcion_C.kicad_pcb ruteo.ses
 
 El paso 3 borra las pistas y vias que hubiera, carga las del .ses, agrega rellenos
-de GND en L1 y L4, rellena todas las zonas y guarda la PCB. KiCad 7 solo importa
+de GND en las dos caras, rellena todas las zonas y guarda la PCB. KiCad 7 solo importa
 .ses desde la interfaz grafica, por eso el .ses se lee aqui.
 """
 import re
@@ -72,13 +72,13 @@ def ensanchar(board, separacion=0.25):
     por_capa = defaultdict(list)  # capa -> [(netcode, shape)]
     for f in board.GetFootprints():
         for p in f.Pads():
-            for l in (pcbnew.F_Cu, pcbnew.In2_Cu, pcbnew.B_Cu):
+            for l in (pcbnew.F_Cu, pcbnew.B_Cu):
                 if p.IsOnLayer(l) and p.FlashLayer(l):
                     por_capa[l].append((p.GetNetCode(), p.GetEffectiveShape(l)))
     tracks = [t for t in board.GetTracks()]
     for t in tracks:
         if t.GetClass() == "PCB_VIA":
-            for l in (pcbnew.F_Cu, pcbnew.In2_Cu, pcbnew.B_Cu):
+            for l in (pcbnew.F_Cu, pcbnew.B_Cu):
                 por_capa[l].append((t.GetNetCode(), t.GetEffectiveShape(l)))
     sep = pcbnew.FromMM(separacion)
     cambios = 0
@@ -110,20 +110,21 @@ def ensanchar(board, separacion=0.25):
 
 def costura(board, gnd, paso=4.0, d=0.6, broca=0.3, sep=0.3):
     """Vias de costura de GND en una reticula, solo donde caben dentro del relleno de GND
-    de L1 y de L4 y no tocan nada en L3."""
-    zf = [z for z in board.Zones() if z.GetZoneName() == "GND_L1"][0].GetFilledPolysList(pcbnew.F_Cu)
-    zb = [z for z in board.Zones() if z.GetZoneName() == "GND_L4"][0].GetFilledPolysList(pcbnew.B_Cu)
+    de las dos caras."""
+    zf = [z for z in board.Zones() if z.GetZoneName() == "GND_SUP"][0].GetFilledPolysList(pcbnew.F_Cu)
+    zb = [z for z in board.Zones() if z.GetZoneName() == "GND_INF"][0].GetFilledPolysList(pcbnew.B_Cu)
     r = pcbnew.FromMM(d / 2 + 0.05)
-    in2 = [t.GetEffectiveShape(pcbnew.In2_Cu) for t in board.GetTracks()
-           if t.GetClass() == "PCB_TRACK" and t.GetLayer() == pcbnew.In2_Cu]
-    in2 += [p.GetEffectiveShape(pcbnew.In2_Cu) for f in board.GetFootprints() for p in f.Pads()
-            if p.IsOnLayer(pcbnew.In2_Cu) and p.GetNetCode() != gnd.GetNetCode()]
     agujeros = [(t.GetPosition(), t.GetDrillValue()) for t in board.GetTracks() if t.GetClass() == "PCB_VIA"]
     agujeros += [(p.GetPosition(), p.GetDrillSize().x) for f in board.GetFootprints() for p in f.Pads()
                  if p.GetDrillSize().x > 0]
     # nada de costura bajo las piezas (salvo las celdas, que van en la otra cara)
     cajas = [f.GetBoundingBox(False, False) for f in board.GetFootprints()
              if f.GetReference() not in ("BT1", "BT2") and not f.GetReference().startswith("H")]
+    ajenos = {l: [o.GetEffectiveShape(l) for o in board.GetTracks()
+                  if o.GetClass() == "PCB_TRACK" and o.GetLayer() == l and o.GetNetCode() != gnd.GetNetCode()]
+              + [p.GetEffectiveShape(l) for f in board.GetFootprints() for p in f.Pads()
+                 if p.IsOnLayer(l) and p.GetNetCode() != gnd.GetNetCode()]
+              for l in (pcbnew.F_Cu, pcbnew.B_Cu)}
     n = 0
     y = 2.0
     while y < H - 1.5:
@@ -137,10 +138,13 @@ def costura(board, gnd, paso=4.0, d=0.6, broca=0.3, sep=0.3):
                 via.SetWidth(pcbnew.FromMM(d))
                 via.SetDrill(pcbnew.FromMM(broca))
                 via.SetNet(gnd)
-                sh = via.GetEffectiveShape(pcbnew.In2_Cu)
-                lejos = all((c - pos).EuclideanNorm() > (dr + pcbnew.FromMM(broca)) / 2 + pcbnew.FromMM(0.5)
+                # el relleno solo se revisa en cinco puntos; aqui se revisa la via completa contra
+                # pistas y pads de otras redes en las dos caras
+                choca = any(via.GetEffectiveShape(l).Collide(o, pcbnew.FromMM(sep))
+                            for l in (pcbnew.F_Cu, pcbnew.B_Cu) for o in ajenos[l])
+                lejos = not choca and all((c - pos).EuclideanNorm() > (dr + pcbnew.FromMM(broca)) / 2 + pcbnew.FromMM(0.5)
                             for pos, dr in agujeros)
-                if lejos and not any(sh.Collide(o, pcbnew.FromMM(sep)) for o in in2):
+                if lejos:
                     board.Add(via)
                     agujeros.append((c, pcbnew.FromMM(broca)))
                     n += 1
@@ -154,9 +158,7 @@ def exportar_dsn(pcb, dsn):
     pcbnew.ZONE_FILLER(board).Fill(board.Zones())
     ok = pcbnew.ExportSpecctraDSN(board, dsn)
     t = open(dsn).read()
-    # L2 es plano de GND: Freerouting no debe poner pistas ahi, solo vias al plano
-    t = t.replace("(layer In1.Cu\n      (type signal)", "(layer In1.Cu\n      (type power)", 1)
-    # potencia solo en capas exteriores de 1 oz. Se rutea a 0.3 mm para poder entrar a los
+    # potencia en las dos caras (1 oz). Se rutea a 0.3 mm para poder entrar a los
     # pads de TSSOP, SOT-23 y VQFN; al importar el .ses cada tramo se ensancha hasta donde
     # dejan las separaciones (ensanchar())
     t = re.sub(r"(\(class POTENCIA[^(]*\(circuit\n\s*)(\(use_via [^)]*\))",
@@ -185,7 +187,7 @@ def importar_ses(pcb, ses):
             m = re.search(r"_(\d+):(\d+)_um", ps[1])
             if m:
                 vias_tam[ps[1]] = (int(m.group(1)) * 1000, int(m.group(2)) * 1000)
-    capas = {board.GetLayerName(l): l for l in (pcbnew.F_Cu, pcbnew.In1_Cu, pcbnew.In2_Cu, pcbnew.B_Cu)}
+    capas = {board.GetLayerName(l): l for l in (pcbnew.F_Cu, pcbnew.B_Cu)}
     nets = board.GetNetsByName()
     n_pistas = n_vias = 0
     for netout in find(routes, "network_out"):
@@ -220,10 +222,10 @@ def importar_ses(pcb, ses):
     ensanchar(board)
     gnd = nets["/GND"]
     nombres = [z.GetZoneName() for z in board.Zones()]
-    if "GND_L1" not in nombres:
-        zona_gnd(board, pcbnew.F_Cu, "GND_L1", gnd)
-    if "GND_L4" not in nombres:
-        zona_gnd(board, pcbnew.B_Cu, "GND_L4", gnd)
+    if "GND_SUP" not in nombres:
+        zona_gnd(board, pcbnew.F_Cu, "GND_SUP", gnd)
+    if "GND_INF" not in nombres:
+        zona_gnd(board, pcbnew.B_Cu, "GND_INF", gnd)
     pcbnew.ZONE_FILLER(board).Fill(board.Zones())
     costura(board, gnd)
     pcbnew.ZONE_FILLER(board).Fill(board.Zones())
