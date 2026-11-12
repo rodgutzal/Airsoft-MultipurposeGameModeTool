@@ -24,6 +24,8 @@
 
 static const char *TAG = "FlashDriver";
 
+/* C_TRUE cuando FlashInit termino bien. Las demas funciones lo revisan y
+ * devuelven ESP_ERR_INVALID_STATE si todavia es C_FALSE. */
 static bool sIsFlashReady = C_FALSE;
 
 /**
