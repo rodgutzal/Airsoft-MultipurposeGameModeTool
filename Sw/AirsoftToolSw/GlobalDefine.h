@@ -45,6 +45,39 @@
 #define C_PIN_LCD_RST     41
 #define C_PIN_LCD_CS      42
 
+/* ---- Pantalla TFT, bus de 16 bits (hardware v0.8 y opcion C) ----
+ * D8 a D15 son los GPIO que en las constantes v0.7 de arriba aparecen como
+ * teclado, switches y boton (ver Sw/MapaPines.md). DisplayDriver usa solo
+ * estas constantes; C_PIN_LCD_RST y C_PIN_LCD_CS no se usan (RST va a EN y CS a GND). */
+#define C_PIN_LCD_D8      8
+#define C_PIN_LCD_D9      9
+#define C_PIN_LCD_D10     11
+#define C_PIN_LCD_D11     12
+#define C_PIN_LCD_D12     13
+#define C_PIN_LCD_D13     14
+#define C_PIN_LCD_D14     21
+#define C_PIN_LCD_D15     47
+
+/* ---- DisplayDriver: parametros de la pantalla ---- */
+#define C_LCD_BUS_WIDTH         16        /* bits del bus i80: 8 o 16 */
+#define C_LCD_H_RES             480       /* pixeles por linea (horizontal) */
+#define C_LCD_V_RES             320       /* lineas (vertical) */
+#define C_LCD_BYTES_PER_PIXEL   2         /* RGB565 */
+#define C_LCD_BUFFER_LINES      20        /* lineas por transferencia: 480 x 20 x 2 = 19200 bytes */
+#define C_LCD_PCLK_HZ           10000000  /* Hz. Reloj de escritura (WR) pedido; el panel lo limita a su maximo */
+#define C_LCD_TRANSFER_TIMEOUT_MS  100    /* ms. Espera maxima a que termine una transferencia de color */
+#define C_LCD_INIT_PARAMS_MAX   16        /* parametros maximos de un comando de inicio */
+#define C_LCD_COLOR_BLACK       0x0000    /* RGB565 */
+#define C_LCD_COLOR_RED         0xF800
+#define C_LCD_COLOR_GREEN       0x07E0
+#define C_LCD_COLOR_BLUE        0x001F
+#define C_LCD_COLOR_WHITE       0xFFFF
+#define C_LCD_CMD_CASET         0x2A      /* fijar columnas */
+#define C_LCD_CMD_RASET         0x2B      /* fijar filas */
+#define C_LCD_CMD_RAMWR         0x2C      /* escribir memoria de imagen */
+#define C_LCD_CMD_MADCTL        0x36      /* orientacion y orden de color */
+#define C_LCD_CMD_DISPON        0x29      /* encender pantalla */
+
 /* ---- Teclado 4x4: filas salidas, columnas entradas con pull-up externo ---- */
 #define C_PIN_KEY_F1      11
 #define C_PIN_KEY_F2      12

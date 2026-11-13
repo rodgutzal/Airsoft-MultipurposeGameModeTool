@@ -17,6 +17,7 @@ Resumen:
 | [`GpioDriver`](#gpiodriver) | `GpioDriver.c/.h` | Arranque y ciclo de 5 ms | No |
 | [`FlashDriver`](#flashdriver) | `FlashDriver.c/.h` | Arranque y fuera del ciclo de 5 ms | **Sí, decenas de ms al escribir** |
 | [`HeartbeatDriver`](#heartbeatdriver) | `HeartbeatDriver.c/.h` | Arranque y ciclo de 5 ms | No |
+| [`DisplayDriver`](#displaydriver) | `DisplayDriver.c/.h`, `PanelDriver.h`, `PanelIli9486Driver.c/.h`, `PanelSt7796Driver.c/.h` | Arranque y fuera del ciclo de 5 ms | **Sí, hasta que termina el DMA** |
 | [`TimerDriver`](#timerdriver) | `TimerDriver.c/.h` | Arranque y ciclo de 5 ms | `TimerWaitMainTick` duerme hasta el siguiente periodo |
 
 ## MainProcess
@@ -99,6 +100,19 @@ LED de estado en `C_PIN_LED_ESTADO` (GPIO43). Indica que el ciclo principal sigu
 | `esp_err_t HeartbeatInit(void)` | Configura el pin como salida con el LED apagado y reinicia la cuenta. Una vez, antes de llamar `HeartbeatTick`. | `ESP_OK`; o el error de `ConfigGpioAsOutput`. |
 | `void HeartbeatTick(void)` | Avanza un periodo. Se llama **una vez por cada periodo de 5 ms** desde el ciclo principal. No escribe en el log. | Nada. |
 
+## DisplayDriver
+
+Pantalla TFT sobre el bus i80 de `esp_lcd` (16 bits, `C_LCD_BUS_WIDTH`). La API no depende del controlador: el modelo (ILI9486 por omisión, o ST7796U) se elige en `menuconfig` > Airsoft Tool > `AIRSOFT_LCD_CONTROLLER` y su secuencia de inicio está en `PanelIli9486Driver.c` o `PanelSt7796Driver.c` (cada uno solo entrega un `PanelDescriptor_t`, no toca el hardware). RST va a EN y CS a GND, por eso no hay GPIO para ellos. **Las transferencias son bloqueantes (esperan al DMA): no llamarlas desde el ciclo de 5 ms.** No maneja la retroiluminación (U6 GPB4, pendiente del driver I2C). **Sin validar en hardware.**
+
+| Función | Descripción | Devuelve |
+| --- | --- | --- |
+| `esp_err_t DisplayInit(void)` | Crea el bus, la interfaz del panel y el buffer DMA (`C_LCD_H_RES` × `C_LCD_BUFFER_LINES` × 2 bytes), ejecuta la secuencia de inicio, fija la orientación horizontal (480x320) y enciende la pantalla. Una sola vez. | `ESP_OK`; `ESP_ERR_INVALID_STATE` si ya se inicializó; `ESP_ERR_NO_MEM`; u otro error de `esp_lcd`. |
+| `esp_err_t DisplayFillColor(uint16_t color565)` | Llena toda la pantalla con un color RGB565 (`C_LCD_COLOR_*`). | `ESP_OK`; `ESP_ERR_INVALID_STATE` si falta `DisplayInit`; `ESP_ERR_TIMEOUT`; u otro error de `esp_lcd`. |
+| `esp_err_t DisplayDrawBitmap(int xStart, int yStart, int xEnd, int yEnd, const uint16_t *pixels)` | Dibuja un rectángulo RGB565 (esquinas inclusivas). Debe caber en `C_LCD_BUFFER_LINES` líneas y estar en memoria apta para DMA. | Igual que la anterior; `ESP_ERR_INVALID_ARG` si el rectángulo no es válido o `pixels` es NULL. |
+| `const char *DisplayGetControllerName(void)` | Nombre del controlador elegido. | `"ILI9486"`, `"ST7796U"` o `"sin inicializar"`. |
+
+Para agregar otro controlador: crear `Panel[Nombre]Driver.c/.h` con su `PanelDescriptor_t`, añadir la opción en `Kconfig.projbuild` y el caso en `DisplaySelectPanel`.
+
 ## TimerDriver
 
 Timer periódico de hardware (GPTimer) que genera la interrupción de `C_TIMER_PERIOD_MS` (5 ms) y marca el paso del ciclo principal. La bandera, la notificación a la tarea y la ISR son internas del driver.
@@ -127,4 +141,4 @@ while(C_TRUE)
 
 ## Qué falta
 
-Estos módulos están en el plan de [`Arquitectura.md`](Arquitectura.md) pero todavía no existen, así que no tienen API: `WatchdogDriver`, `DmaDriver`, `LedStripDriver`, `DisplayDriver`, `AudioDriver`, `KeypadDriver` / `InputDriver` y `AdcDriver`. Cuando se agreguen, su API se documenta aquí en el mismo PR.
+Estos módulos están en el plan de [`Arquitectura.md`](Arquitectura.md) pero todavía no existen, así que no tienen API: `WatchdogDriver`, `DmaDriver`, `LedStripDriver`, touch y LVGL de la pantalla, `AudioDriver`, `KeypadDriver` / `InputDriver` y `AdcDriver`. Cuando se agreguen, su API se documenta aquí en el mismo PR.

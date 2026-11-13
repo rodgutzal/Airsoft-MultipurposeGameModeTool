@@ -48,7 +48,7 @@ Consecuencia práctica: con la placa v0.8 o la opción C, `InitSimpleGpioPorts` 
 
 | Función | Dónde está | Notas |
 | --- | --- | --- |
-| `LCD_D8` a `LCD_D15` | GPIO 8, 9, 11, 12, 13, 14, 21, 47 | Bus de 16 bits de la pantalla (ILI9486). |
+| `LCD_D8` a `LCD_D15` | GPIO 8, 9, 11, 12, 13, 14, 21, 47 | Bus de 16 bits de la pantalla. Ya tienen constante `C_PIN_LCD_D8` a `C_PIN_LCD_D15` (las usa `DisplayDriver`), pero los GPIO siguen repetidos en `C_PIN_KEY_*` y `C_PIN_SW_*` de la tabla anterior hasta migrar el teclado al MCP23017. |
 | `TOUCH_CLK`, `TOUCH_MOSI`, `TOUCH_MISO`, `TOUCH_CS` | GPIO 38, 46, 48, 41 | SPI del touch resistivo XPT2046. `TOUCH_MOSI` (GPIO46) es pin de arranque con pull-down R9. |
 | `I2C_SDA`, `I2C_SCL` | GPIO 39, 42 | Bus del expansor U6 (MCP23017, dirección 0x20), pull-ups R10 y R11. |
 | `TOUCH_PEN` | U6 `GPB3` | Bajo cuando se toca la pantalla. |

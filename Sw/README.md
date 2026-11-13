@@ -16,7 +16,7 @@ flowchart TB
     MAIN["main.c<br/>app_main y ciclo principal"]
     MP["MainProcess<br/>procesos base"]
     RAM["Ram<br/>variables globales"]
-    DRV["Drivers propios<br/>ClockDriver, FlashDriver, GpioDriver, HeartbeatDriver, TimerDriver"]
+    DRV["Drivers propios<br/>ClockDriver, DisplayDriver, FlashDriver, GpioDriver, HeartbeatDriver, PanelIli9486Driver, PanelSt7796Driver, TimerDriver"]
     GD["GlobalDefine.h<br/>constantes y tipos"]
   end
   subgraph IDF["ESP-IDF v6.1"]
@@ -67,6 +67,11 @@ El código vive en `AirsoftToolSw/` (declarado como componente en `CMakeLists.tx
 | `MainProcess.c` / `.h` | Secuencia de arranque: `InitMainProcess` (reloj, puertos simples, almacenamiento en flash y timer) e `InitSimpleGpioPorts`. |
 | `ClockDriver.c` / `.h` | Reloj del CPU: `ConfigCpuClock` (240 MHz por PLL con `esp_pm`) y `VerifyCpuClockFrequency`. |
 | `GpioDriver.c` / `.h` | `ConfigGpioAsOutput`, `ConfigGpioAsInput` y `SetGpioLevel`, con validación de pin. |
+| `DisplayDriver.c` / `.h` | Pantalla TFT sobre el bus i80 de `esp_lcd` (16 bits). API independiente del controlador: `DisplayInit`, `DisplayFillColor`, `DisplayDrawBitmap`, `DisplayGetControllerName`. El controlador (ILI9486 o ST7796U) se elige en `menuconfig` > Airsoft Tool (`AIRSOFT_LCD_CONTROLLER`). Transferencias bloqueantes; no se llama desde el ciclo de 5 ms. **Sin validar en hardware.** |
+| `PanelDriver.h` | Tipos comunes de la capa de panel: `PanelInitCommand_t` y `PanelDescriptor_t` (secuencia de inicio, MADCTL, reloj máximo). |
+| `PanelIli9486Driver.c` / `.h` | Descriptor del ILI9486: `PanelIli9486GetDescriptor`. Solo datos, no toca el hardware. Valores de la comunidad, sin validar. |
+| `PanelSt7796Driver.c` / `.h` | Descriptor del ST7796U: `PanelSt7796GetDescriptor`. Solo datos, no toca el hardware. Valores del ST7796 de la comunidad, sin confirmar para la variante U. |
+| `Kconfig.projbuild` | Opción `AIRSOFT_LCD_CONTROLLER` (ILI9486 por omisión, o ST7796U). |
 | `HeartbeatDriver.c` / `.h` | LED de heartbeat en `C_PIN_LED_ESTADO` (GPIO43): `HeartbeatInit` y `HeartbeatTick`. Se llama una vez por periodo de 5 ms y el LED cambia cada `C_HEARTBEAT_HALF_TICKS` (100 periodos = 0.5 s), así que el ciclo completo dura `C_HEARTBEAT_PERIOD_MS` (1 s). Si el ciclo principal se atasca, el LED se queda fijo. No escribe en el log. |
 | `FlashDriver.c` / `.h` | Almacenamiento persistente en flash (NVS) bajo el espacio de nombres `C_FLASH_NAMESPACE`: `FlashInit`, `FlashReadU32` / `FlashWriteU32`, `FlashReadBlob` / `FlashWriteBlob` y `FlashEraseAll`. Las escrituras son bloqueantes (decenas de ms): no se llaman dentro de las subrutinas del ciclo de 5 ms. |
 | `partitions.csv` | Tabla de particiones propia (ver Configuración). |
@@ -106,6 +111,16 @@ flowchart LR
   HeartbeatDriver_c --> GpioDriver_h
   TimerDriver_c["TimerDriver.c"] --> TimerDriver_h
   TimerDriver_c --> Ram_h
+  MainProcess_c --> DisplayDriver_h["DisplayDriver.h"]
+  DisplayDriver_c["DisplayDriver.c"] --> DisplayDriver_h
+  DisplayDriver_c --> Ram_h
+  DisplayDriver_c --> PanelIli9486Driver_h["PanelIli9486Driver.h"]
+  DisplayDriver_c --> PanelSt7796Driver_h["PanelSt7796Driver.h"]
+  PanelIli9486Driver_h --> PanelDriver_h["PanelDriver.h"]
+  PanelSt7796Driver_h --> PanelDriver_h
+  PanelDriver_h --> Ram_h
+  PanelIli9486Driver_c["PanelIli9486Driver.c"] --> PanelIli9486Driver_h
+  PanelSt7796Driver_c["PanelSt7796Driver.c"] --> PanelSt7796Driver_h
 ```
 
 Ningún driver usa variables de `Ram`: `ClockDriver`, `FlashDriver`, `GpioDriver`, `HeartbeatDriver` y `TimerDriver` incluyen `Ram.h` solo para las constantes `C_*` y las uniones. `main.c` y `Ram.c` definen `C_RAM_EXPOSE_GLOBALS` para ver las variables.
@@ -185,6 +200,24 @@ classDiagram
     -sTickCount uint32_t
     -sLedLevel int
   }
+  class DisplayDriver {
+    <<module>>
+    +DisplayInit() esp_err_t
+    +DisplayFillColor(color565) esp_err_t
+    +DisplayDrawBitmap(xStart, yStart, xEnd, yEnd, pixels) esp_err_t
+    +DisplayGetControllerName() char*
+    -DisplayWriteWindow() esp_err_t
+    -DisplayColorTransferDoneIsr() bool
+    -sPanel PanelDescriptor_t*
+  }
+  class PanelIli9486Driver {
+    <<module>>
+    +PanelIli9486GetDescriptor() PanelDescriptor_t*
+  }
+  class PanelSt7796Driver {
+    <<module>>
+    +PanelSt7796GetDescriptor() PanelDescriptor_t*
+  }
   class TimerDriver {
     <<module>>
     +TimerInit() esp_err_t
@@ -214,6 +247,10 @@ classDiagram
   MainProcess ..> HeartbeatDriver : HeartbeatInit
   HeartbeatDriver ..> GpioDriver : ConfigGpioAsOutput / SetGpioLevel
   HeartbeatDriver ..> Ram : usa constantes
+  MainProcess ..> DisplayDriver : DisplayInit
+  DisplayDriver ..> PanelIli9486Driver : descriptor (si Kconfig = ILI9486)
+  DisplayDriver ..> PanelSt7796Driver : descriptor (si Kconfig = ST7796U)
+  DisplayDriver ..> Ram : usa constantes
   FlashDriver ..> Ram : usa constantes
   MainProcess ..> TimerDriver : usa
   MainProcess ..> Ram : usa constantes

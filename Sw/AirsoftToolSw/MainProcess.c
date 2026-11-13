@@ -19,6 +19,7 @@
 #include "MainProcess.h"
 #include "Ram.h"
 #include "ClockDriver.h"
+#include "DisplayDriver.h"
 #include "FlashDriver.h"
 #include "GpioDriver.h"
 #include "HeartbeatDriver.h"
@@ -66,7 +67,8 @@ void InitSimpleGpioPorts(void)
  *              ejecuta la secuencia de arranque: reloj (ClockDriver), puertos
  *              simples, almacenamiento en flash (FlashInit; si falla solo se
  *              avisa y el firmware sigue sin guardar datos), LED de heartbeat
- *              (HeartbeatInit; si falla solo se avisa) y timer periodico
+ *              (HeartbeatInit; si falla solo se avisa), pantalla (DisplayInit;
+ *              si falla solo se avisa y el firmware sigue sin display) y timer periodico
  *              (TimerInit y TimerStart).
  * Entradas:    Ninguna.
  * Salidas:     Ninguna (escribe en el log).
@@ -94,6 +96,17 @@ void InitMainProcess(void)
   if(HeartbeatInit() != ESP_OK)
   {
     ESP_LOGE(TAG, "Sin LED de heartbeat: el firmware sigue sin indicador");
+  }
+
+  /* La pantalla va despues de InitSimpleGpioPorts: el bus i80 toma los GPIO
+   * 8 a 14, 21 y 47, que ese pinout v0.7 configura como teclado y switches. */
+  if(DisplayInit() != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Sin pantalla: el firmware sigue sin display");
+  }
+  else
+  {
+    DisplayFillColor(C_LCD_COLOR_BLACK);
   }
 
   ESP_ERROR_CHECK(TimerInit());
