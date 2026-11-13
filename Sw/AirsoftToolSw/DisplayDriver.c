@@ -447,6 +447,13 @@ esp_err_t DisplayDrawBitmap(int xStart, int yStart, int xEnd, int yEnd, const ui
     return ESP_ERR_INVALID_ARG;
   }
 
+  /* Tambien el ultimo byte del bloque debe estar en memoria apta para DMA */
+  const uint16_t *lastPixel = pixels + ((xEnd - xStart + 1) * (yEnd - yStart + 1)) - 1;
+  if(esp_ptr_dma_capable(lastPixel) == false)
+  {
+    return ESP_ERR_INVALID_ARG;
+  }
+
   xSemaphoreTake(sDisplayMutex, portMAX_DELAY);
 
   esp_err_t err = DisplayWaitPendingTransfer();
