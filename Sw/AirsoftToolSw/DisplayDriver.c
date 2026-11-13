@@ -253,6 +253,12 @@ static esp_err_t DisplayStart(void)
       .dc_dummy_level = 0,
       .dc_data_level  = 1,
     },
+    .flags             =
+    {
+      /* Con bus de 16 bits cada pixel RGB565 sale como una palabra y no se cambia;
+       * con bus de 8 bits hay que mandar primero el byte alto. */
+      .swap_color_bytes = (C_LCD_BUS_WIDTH == 8) ? 1 : 0,
+    },
   };
   err = esp_lcd_new_panel_io_i80(sI80Bus, &ioConfig, &sPanelIo);
   if(err != ESP_OK)
