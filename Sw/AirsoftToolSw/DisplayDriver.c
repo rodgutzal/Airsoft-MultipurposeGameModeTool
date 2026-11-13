@@ -40,6 +40,7 @@ static esp_lcd_panel_io_handle_t sPanelIo = NULL;        /* interfaz del panel; 
 static SemaphoreHandle_t sTransferDoneSemaphore = NULL;  /* la ISR lo da al terminar una transferencia de color */
 static uint16_t *sLineBuffer = NULL;                     /* buffer DMA de C_LCD_BUFFER_LINES lineas */
 static const PanelDescriptor_t *sPanel = NULL;           /* controlador elegido en Kconfig */
+static bool sTransferPending = false;                    /* true si una transferencia expiro y el DMA puede seguir leyendo el buffer */
 
 /**
  * Nombre:      DisplayColorTransferDoneIsr
@@ -96,7 +97,9 @@ static esp_err_t DisplaySendCommand(uint8_t command, const uint8_t *params, size
  * Nombre:      DisplayWriteWindow
  * Descripcion: Fija la ventana de memoria (columnas y filas inclusivas) y envia
  *              los pixeles. Espera a que termine el DMA, asi el buffer se puede
- *              reutilizar al volver.
+ *              reutilizar al volver. Si una transferencia anterior expiro, antes
+ *              espera a que el DMA la termine y, si no termina, devuelve
+ *              ESP_ERR_TIMEOUT sin tocar el bus.
  * Entradas:    xStart, yStart - esquina superior izquierda.
  *              xEnd, yEnd     - esquina inferior derecha (inclusive).
  *              pixels         - pixeles RGB565, memoria apta para DMA.
@@ -108,6 +111,17 @@ static esp_err_t DisplayWriteWindow(int xStart, int yStart, int xEnd, int yEnd, 
   uint8_t columns[4] = { (uint8_t)(xStart >> 8), (uint8_t)xStart, (uint8_t)(xEnd >> 8), (uint8_t)xEnd };
   uint8_t rows[4]    = { (uint8_t)(yStart >> 8), (uint8_t)yStart, (uint8_t)(yEnd >> 8), (uint8_t)yEnd };
   size_t byteCount = (size_t)(xEnd - xStart + 1) * (size_t)(yEnd - yStart + 1) * C_LCD_BYTES_PER_PIXEL;
+
+  /* Si la transferencia anterior expiro, esperar a que el DMA termine antes de
+   * tocar el bus o de reutilizar el buffer. */
+  if(sTransferPending == true)
+  {
+    if(xSemaphoreTake(sTransferDoneSemaphore, pdMS_TO_TICKS(C_LCD_TRANSFER_TIMEOUT_MS)) != pdTRUE)
+    {
+      return ESP_ERR_TIMEOUT;
+    }
+    sTransferPending = false;
+  }
 
   esp_err_t err = DisplaySendCommand(C_LCD_CMD_CASET, columns, sizeof(columns));
   if(err == ESP_OK)
@@ -127,6 +141,7 @@ static esp_err_t DisplayWriteWindow(int xStart, int yStart, int xEnd, int yEnd, 
   if(xSemaphoreTake(sTransferDoneSemaphore, pdMS_TO_TICKS(C_LCD_TRANSFER_TIMEOUT_MS)) != pdTRUE)
   {
     ESP_LOGE(TAG, "La transferencia de color no termino en %d ms", C_LCD_TRANSFER_TIMEOUT_MS);
+    sTransferPending = true;
     return ESP_ERR_TIMEOUT;
   }
 

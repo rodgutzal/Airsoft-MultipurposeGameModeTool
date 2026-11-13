@@ -12,7 +12,7 @@ Fuentes del hardware (si difieren de este documento, mandan ellas):
 
 **El firmware sigue el pinout de v0.7 y la placa es v0.8 o posterior.** En v0.8 la pantalla pasó a 16 bits con touch por SPI, y el teclado, los switches y el botón se movieron a un expansor I2C MCP23017. El firmware todavía no tiene ese cambio: está pendiente y figura en los pendientes de `Hw/esquematico_v1/README.md`.
 
-Consecuencia práctica: con la placa v0.8 o la opción C, `InitSimpleGpioPorts` (en `MainProcess.c`) configura pines que ahora son de otra función. Es inofensivo mientras la pantalla y el touch no estén conectados al firmware, porque esas líneas son entradas para el otro lado, pero los nombres `C_PIN_KEY_*`, `C_PIN_SW_*` y `C_PIN_BTN_ACCION` no corresponden a ningún GPIO real. No hay que escribir drivers nuevos sobre esos nombres.
+Consecuencia práctica: los nombres `C_PIN_KEY_*`, `C_PIN_SW_*`, `C_PIN_BTN_ACCION` y `C_PIN_TIRA_LED_2` no corresponden a ningún GPIO real de la placa v0.8 u opción C (hoy son bus de pantalla y SPI del touch), así que `InitSimpleGpioPorts` ya no los configura (solo deja `C_PIN_TIRA_LED_1` en bajo). Las constantes siguen en `GlobalDefine.h` hasta migrar al MCP23017. No hay que escribir drivers nuevos sobre esos nombres.
 
 ## Pines que coinciden
 

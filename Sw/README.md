@@ -279,7 +279,7 @@ sequenceDiagram
   MP->>Clk: ConfigCpuClock()
   Note over Clk: esp_pm_configure fija 240 MHz y<br/>VerifyCpuClockFrequency lo comprueba
   Clk-->>MP: esp_err_t
-  MP->>Gpio: InitSimpleGpioPorts(): ConfigGpioAsOutput / ConfigGpioAsInput
+  MP->>Gpio: InitSimpleGpioPorts(): ConfigGpioAsOutput (tira LED)
   Gpio-->>MP: esp_err_t
   MP->>Fl: FlashInit()
   Note over Fl: nvs_flash_init; si la particion esta llena<br/>o es de otra version, la borra y la crea

@@ -27,7 +27,7 @@ Secuencia de arranque del micro. Solo la llama `app_main`.
 | Función | Descripción |
 | --- | --- |
 | `void InitMainProcess(void)` | Imprime los datos del chip (núcleos, revisión, flash, PSRAM) y arranca en orden: reloj, puertos simples, flash, heartbeat y timer periódico. Si el reloj, los puertos o el timer fallan, el firmware aborta (`ESP_ERROR_CHECK`). Si la flash o el heartbeat fallan, solo avisa en el log y sigue. |
-| `void InitSimpleGpioPorts(void)` | Configura los GPIO simples: datos de tiras LED en bajo, filas del teclado en alto, columnas, switches y botón como entradas sin pull interno. Aborta si un pin no se puede configurar. **Su pinout es el de v0.7**; ver [`MapaPines.md`](MapaPines.md). |
+| `void InitSimpleGpioPorts(void)` | Configura los GPIO simples: hoy solo el dato de la tira LED en bajo. El teclado, los switches y el botón ya no se configuran aquí: en v0.8 están en el MCP23017 (sin driver aún) y sus antiguos GPIO son el bus de la pantalla y el SPI del touch; ver [`MapaPines.md`](MapaPines.md). Aborta si el pin no se puede configurar. |
 
 ## Ram
 

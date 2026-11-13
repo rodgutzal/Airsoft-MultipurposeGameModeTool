@@ -29,36 +29,24 @@ static const char *TAG = "MainProcess";
 
 /**
  * Nombre:      InitSimpleGpioPorts
- * Descripcion: Configura los puertos simples: datos de las tiras LED en
- *              bajo (hasta que exista el driver RMT), filas del
- *              teclado en alto, columnas del teclado, switches y push button
- *              como entradas sin pull interno (el pull-up es externo). Los
- *              pines de LCD, I2S y ADC los configura su propio driver. Si
- *              algun pin no se puede configurar, el firmware aborta con el
- *              error (ESP_ERROR_CHECK).
+ * Descripcion: Configura los puertos simples: dato de la tira LED en bajo
+ *              (hasta que exista el driver RMT). El teclado, los switches y el
+ *              push button estan en el expansor MCP23017 (hardware v0.8) y
+ *              los configurara su driver; no se tocan sus antiguos GPIO porque
+ *              ahora son el bus de la pantalla y el SPI del touch. Los pines
+ *              de LCD, I2S y ADC los configura su propio driver. Si el pin no
+ *              se puede configurar, el firmware aborta (ESP_ERROR_CHECK).
  * Entradas:    Ninguna.
  * Salidas:     Ninguna.
  */
 void InitSimpleGpioPorts(void)
 {
-  /* Datos de las tiras LED en bajo */
+  /* Datos de la tira LED en bajo (hardware v0.8: una sola linea para las dos tiras) */
   ESP_ERROR_CHECK(ConfigGpioAsOutput(C_PIN_TIRA_LED_1, 0));
-  ESP_ERROR_CHECK(ConfigGpioAsOutput(C_PIN_TIRA_LED_2, 0));
 
-  /* Filas del teclado en alto, columnas como entradas (pull-up externo) */
-  ESP_ERROR_CHECK(ConfigGpioAsOutput(C_PIN_KEY_F1, 1));
-  ESP_ERROR_CHECK(ConfigGpioAsOutput(C_PIN_KEY_F2, 1));
-  ESP_ERROR_CHECK(ConfigGpioAsOutput(C_PIN_KEY_F3, 1));
-  ESP_ERROR_CHECK(ConfigGpioAsOutput(C_PIN_KEY_F4, 1));
-  ESP_ERROR_CHECK(ConfigGpioAsInput(C_PIN_KEY_C1));
-  ESP_ERROR_CHECK(ConfigGpioAsInput(C_PIN_KEY_C2));
-  ESP_ERROR_CHECK(ConfigGpioAsInput(C_PIN_KEY_C3));
-  ESP_ERROR_CHECK(ConfigGpioAsInput(C_PIN_KEY_C4));
-
-  /* Switches y push button */
-  ESP_ERROR_CHECK(ConfigGpioAsInput(C_PIN_SW_EQUIPO));
-  ESP_ERROR_CHECK(ConfigGpioAsInput(C_PIN_SW_ARMADO));
-  ESP_ERROR_CHECK(ConfigGpioAsInput(C_PIN_BTN_ACCION));
+  /* El teclado, los switches y el push button ya no estan en GPIO directos:
+   * en el hardware v0.8 viven en el expansor MCP23017 (pendiente de driver) y
+   * sus antiguos GPIO son el bus de la pantalla y el SPI del touch. */
 }
 
 /**
@@ -98,8 +86,6 @@ void InitMainProcess(void)
     ESP_LOGE(TAG, "Sin LED de heartbeat: el firmware sigue sin indicador");
   }
 
-  /* La pantalla va despues de InitSimpleGpioPorts: el bus i80 toma los GPIO
-   * 8 a 14, 21 y 47, que ese pinout v0.7 configura como teclado y switches. */
   if(DisplayInit() != ESP_OK)
   {
     ESP_LOGE(TAG, "Sin pantalla: el firmware sigue sin display");

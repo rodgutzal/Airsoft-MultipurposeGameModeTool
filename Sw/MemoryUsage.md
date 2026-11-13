@@ -43,4 +43,4 @@ Notas:
 | 2026-11-04 | `ef6f065` | 218,384 | 6.9 (de 3 MB) | 59,710 | 17.5 | FlashDriver (NVS), tabla de particiones propia (ota_0 de 3 MB) y CONFIG_GPTIMER_ISR_IRAM_SAFE |
 | 2026-11-07 | `1793dca` | 219,392 | 7.0 (de 3 MB) | 59,710 | 17.5 | HeartbeatDriver (LED en GPIO43, ciclo de 1 s), SetGpioLevel y consola por USB-Serial-JTAG |
 | 2026-11-12 | este commit (sobre `53404b2`) | 219,392 | 7.0 (de 3 MB) | 59,710 | 17.5 | Solo comentarios y documentacion (guia de desarrollo, referencia de API, mapa de pines); sin cambio de tamano |
-| 2026-11-12 | este commit (sobre `17406f8`) | 240,624 | 7.8 (de 3 MB) | 63,426 | 18.6 | DisplayDriver (i80 de 16 bits con esp_lcd) y paneles ILI9486 / ST7796U elegibles por Kconfig; sin validar en hardware |
+| 2026-11-12 | este commit (sobre `17406f8`) | 239,712 | 7.8 (de 3 MB) | 63,442 | 18.6 | DisplayDriver (i80 de 16 bits con esp_lcd) y paneles ILI9486 / ST7796U elegibles por Kconfig; sin validar en hardware |
