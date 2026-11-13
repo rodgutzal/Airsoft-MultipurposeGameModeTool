@@ -34,13 +34,13 @@ static const PanelInitCommand_t sInitCommands[] =
             0xA5, 0x33 },                         8,  0   },  /* Display output ctrl adjust */
   { 0xC1, { 0x06 },                               1,  0   },  /* Power control 2 */
   { 0xC2, { 0xA7 },                               1,  0   },  /* Power control 3 */
-  { 0xC5, { 0x18 },                               1,  120 },  /* VCOM control */
+  { 0xC5, { 0x18 },                               1,  0   },  /* VCOM control */
   { 0xE0, { 0xF0, 0x09, 0x0B, 0x06, 0x04, 0x15, 0x2F,
             0x54, 0x42, 0x3C, 0x17, 0x14, 0x18, 0x1B }, 14, 0 },  /* Gamma positivo */
   { 0xE1, { 0xE0, 0x09, 0x0B, 0x06, 0x04, 0x03, 0x2B,
-            0x43, 0x42, 0x3B, 0x16, 0x14, 0x17, 0x1B }, 14, 120 },  /* Gamma negativo */
+            0x43, 0x42, 0x3B, 0x16, 0x14, 0x17, 0x1B }, 14, 0   },  /* Gamma negativo */
   { 0xF0, { 0x3C },                               1,  0   },  /* Deshabilitar comandos extendidos, parte 1 */
-  { 0xF0, { 0x69 },                               1,  120 },  /* Deshabilitar comandos extendidos, parte 2 */
+  { 0xF0, { 0x69 },                               1,  0   },  /* Deshabilitar comandos extendidos, parte 2 */
 };
 
 /* Descriptor del ST7796U. MADCTL 0x28 = MV (intercambiar ejes, horizontal) + BGR. */

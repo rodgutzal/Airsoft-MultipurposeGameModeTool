@@ -90,9 +90,9 @@ void InitMainProcess(void)
   {
     ESP_LOGE(TAG, "Sin pantalla: el firmware sigue sin display");
   }
-  else
+  else if(DisplayFillColor(C_LCD_COLOR_BLACK) != ESP_OK)
   {
-    DisplayFillColor(C_LCD_COLOR_BLACK);
+    ESP_LOGE(TAG, "La pantalla se inicio pero no se pudo pintar: revisar el cableado del bus");
   }
 
   ESP_ERROR_CHECK(TimerInit());

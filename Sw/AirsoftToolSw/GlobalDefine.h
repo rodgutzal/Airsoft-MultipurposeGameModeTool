@@ -78,6 +78,11 @@
 #define C_LCD_CMD_MADCTL        0x36      /* orientacion y orden de color */
 #define C_LCD_CMD_DISPON        0x29      /* encender pantalla */
 
+/* OBSOLETO (v0.7): los GPIO de las constantes C_PIN_KEY_*, C_PIN_SW_*,
+ * C_PIN_BTN_ACCION y C_PIN_TIRA_LED_2 de abajo son ahora el bus de la pantalla
+ * (C_PIN_LCD_D8..D15) o el SPI del touch. NO usarlas en drivers nuevos: en v0.8
+ * esas funciones estan en el MCP23017. Se borraran al migrar el pinout. */
+
 /* ---- Teclado 4x4: filas salidas, columnas entradas con pull-up externo ---- */
 #define C_PIN_KEY_F1      11
 #define C_PIN_KEY_F2      12
