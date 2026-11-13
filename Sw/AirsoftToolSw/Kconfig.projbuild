@@ -1,0 +1,18 @@
+menu "Airsoft Tool"
+
+    choice AIRSOFT_LCD_CONTROLLER
+        prompt "Controlador de la pantalla LCD"
+        default AIRSOFT_LCD_CONTROLLER_ILI9486
+        help
+            Controlador del modulo de pantalla instalado. No se puede detectar
+            en tiempo de ejecucion (LCD_RD esta fijo a 3.3 V), por eso se elige
+            al compilar. Ver Sw/Arquitectura.md, seccion 13.
+
+        config AIRSOFT_LCD_CONTROLLER_ILI9486
+            bool "ILI9486 (modulo de 3.5 pulgadas, 16 bits)"
+
+        config AIRSOFT_LCD_CONTROLLER_ST7796U
+            bool "ST7796U (alterno por disponibilidad)"
+    endchoice
+
+endmenu
