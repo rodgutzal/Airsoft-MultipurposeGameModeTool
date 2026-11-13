@@ -130,14 +130,23 @@ static esp_err_t DisplayWaitPendingTransfer(void)
  * Descripcion: Libera el buffer DMA, la interfaz del panel y el bus i80 que
  *              existan y deja sus variables en NULL, para que DisplayInit se
  *              pueda reintentar despues de un error. No borra el semaforo ni el
- *              mutex (se crean una sola vez).
+ *              mutex (se crean una sola vez). Si una transferencia expirada sigue
+ *              activa en el DMA, espera a que termine y, si no termina, no libera
+ *              nada.
  * Entradas:    Ninguna.
  * Salidas:     Ninguna.
  */
 static void DisplayReleaseResources(void)
 {
+  /* Si el DMA de una transferencia expirada sigue activo, no se libera nada: el
+   * buffer y el bus se conservan antes que dejar al DMA leyendo memoria liberada. */
+  if(DisplayWaitPendingTransfer() != ESP_OK)
+  {
+    ESP_LOGE(TAG, "El DMA sigue activo: no se liberan los recursos de la pantalla");
+    return;
+  }
+
   sIsDisplayReady = false;
-  sTransferPending = false;
   sPanel = NULL;
 
   if(sLineBuffer != NULL)
