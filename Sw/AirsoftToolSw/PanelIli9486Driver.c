@@ -22,9 +22,9 @@
 /* Secuencia de inicio. Despues de ella DisplayDriver envia MADCTL y DISPON. */
 static const PanelInitCommand_t sInitCommands[] =
 {
-  { 0x01, { 0 },                                  0,  120 },  /* SWRESET: el RST de la pantalla va a EN, no hay GPIO */
-  { 0x11, { 0 },                                  0,  120 },  /* SLPOUT */
-  { 0x3A, { 0x55 },                               1,  0   },  /* COLMOD: 16 bits por pixel (RGB565) */
+  { C_LCD_CMD_SWRESET, { 0 },                                  0,  120 },  /* SWRESET: el RST de la pantalla va a EN, no hay GPIO */
+  { C_LCD_CMD_SLPOUT, { 0 },                                  0,  120 },  /* SLPOUT */
+  { C_LCD_CMD_COLMOD, { 0x55 },                               1,  0   },  /* COLMOD: 16 bits por pixel (RGB565) */
   { 0xC0, { 0x0D, 0x0D },                         2,  0   },  /* Power control 1 */
   { 0xC1, { 0x43, 0x00 },                         2,  0   },  /* Power control 2 */
   { 0xC2, { 0x00 },                               1,  0   },  /* Power control 3 */

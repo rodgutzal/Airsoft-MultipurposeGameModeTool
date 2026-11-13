@@ -51,7 +51,11 @@ static bool sTransferPending = false;                    /* true si una transfer
  * Nombre:      DisplayColorTransferDoneIsr
  * Descripcion: Callback de esp_lcd que se ejecuta cuando el DMA termino de
  *              enviar un bloque de color. Libera el semaforo que espera
- *              DisplayWriteWindow. Corre en IRAM y no bloquea.
+ *              DisplayWriteWindow. No bloquea. esp_lcd registra esta
+ *              interrupcion sin la bandera IRAM-safe, asi que mientras se
+ *              escribe la flash (por ejemplo un commit de NVS) queda diferida
+ *              hasta que vuelve la cache; no hay fallo, solo un retraso menor
+ *              que C_LCD_TRANSFER_TIMEOUT_MS en condiciones normales.
  * Entradas:    panelIo   - interfaz del panel que termino (no se usa).
  *              eventData - datos del evento (no se usan).
  *              userCtx   - dato del usuario (no se usa).
@@ -134,6 +138,7 @@ static void DisplayReleaseResources(void)
 {
   sIsDisplayReady = false;
   sTransferPending = false;
+  sPanel = NULL;
 
   if(sLineBuffer != NULL)
   {
@@ -234,13 +239,13 @@ static esp_err_t DisplayStart(void)
   uint32_t pclkHz = (C_LCD_PCLK_HZ < sPanel->maxPclkHz) ? C_LCD_PCLK_HZ : sPanel->maxPclkHz;
   esp_lcd_panel_io_i80_config_t ioConfig =
   {
-    .cs_gpio_num       = -1,  /* CS de la pantalla esta a GND */
+    .cs_gpio_num       = C_LCD_CS_NOT_USED,  /* CS de la pantalla esta a GND */
     .pclk_hz           = pclkHz,
     .trans_queue_depth = 1,
     .on_color_trans_done = DisplayColorTransferDoneIsr,
     .user_ctx          = NULL,
-    .lcd_cmd_bits      = 8,
-    .lcd_param_bits    = 8,
+    .lcd_cmd_bits      = C_LCD_CMD_BITS,
+    .lcd_param_bits    = C_LCD_PARAM_BITS,
     .dc_levels         =
     {
       .dc_idle_level  = 0,
@@ -291,7 +296,7 @@ static esp_err_t DisplayStart(void)
     ESP_LOGE(TAG, "No se pudo fijar la orientacion o encender la pantalla (%s)", esp_err_to_name(err));
     return err;
   }
-  vTaskDelay(pdMS_TO_TICKS(20));
+  vTaskDelay(pdMS_TO_TICKS(C_LCD_DISPON_DELAY_MS));
 
   ESP_LOGI(TAG, "Pantalla %s lista: bus de %d bits, %lu Hz, %dx%d",
            sPanel->name, C_LCD_BUS_WIDTH, (unsigned long)pclkHz, C_LCD_H_RES, C_LCD_V_RES);
@@ -444,9 +449,9 @@ esp_err_t DisplayDrawBitmap(int xStart, int yStart, int xEnd, int yEnd, const ui
  * Descripcion: Devuelve el nombre del controlador elegido en Kconfig.
  * Entradas:    Ninguna.
  * Salidas:     Nombre del controlador ("ILI9486" o "ST7796U"), o "sin inicializar"
- *              si DisplayInit no se ha llamado.
+ *              si DisplayInit no se ha llamado o fallo.
  */
 const char *DisplayGetControllerName(void)
 {
-  return (sPanel != NULL) ? sPanel->name : "sin inicializar";
+  return ((sIsDisplayReady == true) && (sPanel != NULL)) ? sPanel->name : "sin inicializar";
 }

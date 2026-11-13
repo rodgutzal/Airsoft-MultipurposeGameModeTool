@@ -8,7 +8,9 @@
  *                    SIN VALIDAR EN HARDWARE: los valores siguen los
  *                    inicializadores habituales del ST7796 (comunidad y
  *                    componente esp_lcd_st7796) y no se ha confirmado que
- *                    sirvan tal cual para la variante U.
+ *                    sirvan tal cual para la variante U. No envia INVON (0x21):
+ *                    si los colores salen invertidos al probar la pantalla,
+ *                    agregar ese comando a la secuencia.
  * Fecha de creacion: 2026-11-12
  * Microcontrolador:  ESP32-S3 (modulo ESP32-S3-WROOM-1 N16R8, placa DevKitC-1)
  * Compilador:        xtensa-esp-elf-gcc 15.2.0 (esp-15.2.0_20251204)
@@ -23,11 +25,11 @@
 /* Secuencia de inicio. Despues de ella DisplayDriver envia MADCTL y DISPON. */
 static const PanelInitCommand_t sInitCommands[] =
 {
-  { 0x01, { 0 },                                  0,  120 },  /* SWRESET: el RST de la pantalla va a EN, no hay GPIO */
-  { 0x11, { 0 },                                  0,  120 },  /* SLPOUT */
+  { C_LCD_CMD_SWRESET, { 0 },                                  0,  120 },  /* SWRESET: el RST de la pantalla va a EN, no hay GPIO */
+  { C_LCD_CMD_SLPOUT, { 0 },                                  0,  120 },  /* SLPOUT */
   { 0xF0, { 0xC3 },                               1,  0   },  /* Habilitar comandos extendidos, parte 1 */
   { 0xF0, { 0x96 },                               1,  0   },  /* Habilitar comandos extendidos, parte 2 */
-  { 0x3A, { 0x55 },                               1,  0   },  /* COLMOD: 16 bits por pixel (RGB565) */
+  { C_LCD_CMD_COLMOD, { 0x55 },                               1,  0   },  /* COLMOD: 16 bits por pixel (RGB565) */
   { 0xB4, { 0x01 },                               1,  0   },  /* Inversion de columnas */
   { 0xB6, { 0x80, 0x02, 0x3B },                   3,  0   },  /* Display function control */
   { 0xE8, { 0x40, 0x8A, 0x00, 0x00, 0x29, 0x19,

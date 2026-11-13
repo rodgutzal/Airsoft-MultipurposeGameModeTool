@@ -72,11 +72,18 @@
 #define C_LCD_COLOR_GREEN       0x07E0
 #define C_LCD_COLOR_BLUE        0x001F
 #define C_LCD_COLOR_WHITE       0xFFFF
+#define C_LCD_CMD_SWRESET       0x01      /* reinicio por software */
+#define C_LCD_CMD_SLPOUT        0x11      /* salir de reposo */
+#define C_LCD_CMD_COLMOD        0x3A      /* formato de pixel */
 #define C_LCD_CMD_CASET         0x2A      /* fijar columnas */
 #define C_LCD_CMD_RASET         0x2B      /* fijar filas */
 #define C_LCD_CMD_RAMWR         0x2C      /* escribir memoria de imagen */
 #define C_LCD_CMD_MADCTL        0x36      /* orientacion y orden de color */
 #define C_LCD_CMD_DISPON        0x29      /* encender pantalla */
+#define C_LCD_CMD_BITS          8         /* bits de un comando en el bus */
+#define C_LCD_PARAM_BITS        8         /* bits de un parametro en el bus */
+#define C_LCD_CS_NOT_USED       (-1)      /* CS de la pantalla esta a GND: sin GPIO */
+#define C_LCD_DISPON_DELAY_MS   20        /* ms de espera despues de encender la pantalla */
 
 /* OBSOLETO (v0.7): los GPIO de las constantes C_PIN_KEY_*, C_PIN_SW_*,
  * C_PIN_BTN_ACCION y C_PIN_TIRA_LED_2 de abajo son ahora el bus de la pantalla
