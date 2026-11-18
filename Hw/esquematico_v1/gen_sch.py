@@ -202,6 +202,8 @@ BAT = use_std("Device", "Battery_Cell")
 SPST = use_std("Switch", "SW_SPST")
 PUSH = use_std("Switch", "SW_Push")
 
+# Orden fisico de los headers, de arriba (antena) a abajo (USB). Coincide con
+# Hw/docs/pinout_yd_esp32_s3.png; no reordenar sin revisar la tarjeta.
 J1 = ["3V3", "3V3", "RST", "GPIO4", "GPIO5", "GPIO6", "GPIO7", "GPIO15", "GPIO16", "GPIO17",
       "GPIO18", "GPIO8", "GPIO3", "GPIO46", "GPIO9", "GPIO10", "GPIO11", "GPIO12", "GPIO13",
       "GPIO14", "5V", "GND"]

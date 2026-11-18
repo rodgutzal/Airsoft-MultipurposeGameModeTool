@@ -32,6 +32,46 @@ Las conexiones se hacen por etiqueta de red. Dos etiquetas con el mismo nombre s
 
 Libre: GPIO44 (U0RXD). El puente USB-UART de la tarjeta lo maneja como salida, por eso no se usa. No usar: GPIO19/20 (USB nativo) ni GPIO35 a 37 (PSRAM octal). No queda ningún GPIO libre en la tarjeta; lo que se agregue después va al expansor U6, que tiene GPB5 a GPB7 libres.
 
+### Orden de los pines contra la tarjeta física
+
+El símbolo U1 sigue el orden de los dos headers de la tarjeta, de arriba (lado de la antena) hacia abajo (lado de los USB-C). Los pines 1 a 22 del símbolo son el header izquierdo (J1) y los 23 a 44 el derecho (J3):
+
+| Posición | Izquierda (J1) | Derecha (J3) |
+| --- | --- | --- |
+| 1 | 3V3 | GND |
+| 2 | 3V3 | GPIO43 (TX) |
+| 3 | RST | GPIO44 (RX) |
+| 4 | GPIO4 | GPIO1 |
+| 5 | GPIO5 | GPIO2 |
+| 6 | GPIO6 | GPIO42 |
+| 7 | GPIO7 | GPIO41 |
+| 8 | GPIO15 | GPIO40 |
+| 9 | GPIO16 | GPIO39 |
+| 10 | GPIO17 | GPIO38 |
+| 11 | GPIO18 | GPIO37 |
+| 12 | GPIO8 | GPIO36 |
+| 13 | GPIO3 | GPIO35 |
+| 14 | GPIO46 | GPIO0 |
+| 15 | GPIO9 | GPIO45 |
+| 16 | GPIO10 | GPIO48 |
+| 17 | GPIO11 | GPIO47 |
+| 18 | GPIO12 | GPIO21 |
+| 19 | GPIO13 | GPIO20 |
+| 20 | GPIO14 | GPIO19 |
+| 21 | 5V | GND |
+| 22 | GND | GND |
+
+Referencia visual del pinout, de la tarjeta YD-ESP32-S3 de VCC-GND Studio (clon del DevKitC-1 con el mismo orden de headers):
+
+![Pinout YD-ESP32-S3](../docs/pinout_yd_esp32_s3.png)
+
+Imagen de [mischianti.org](https://www.mischianti.org), bajo licencia Creative Commons BY-NC-ND (atribución, no comercial, sin obras derivadas). Se incluye sin modificar en `Hw/docs/pinout_yd_esp32_s3.png`.
+
+Diferencias de la YD-ESP32-S3 que afectan este diseño, vistas en la imagen y pendientes de confirmar en la tarjeta:
+
+- Su LED RGB está en GPIO48, igual que la DevKitC-1 v1.0. En este diseño GPIO48 es TOUCH_MISO, así que el XPT2046 manejaría la entrada del LED y este parpadearía con las lecturas del touch. La YD trae un puente de soldadura marcado RGB junto al LED; si está cerrado, conviene abrirlo.
+- Junto al pin 5V tiene un puente marcado IN-OUT. Hasta donde se sabe de esta tarjeta, abierto deja un diodo entre el 5V del USB y el pin 5V, y cerrado los une directo. No está confirmado; hay que medirlo con multímetro. Si están unidos, no se debe conectar el USB con la batería encendida (es el mismo pendiente del diodo que aparece en Alimentación).
+
 ## Expansor U6 (MCP23017)
 
 | Pin de U6 | Señal |
@@ -183,6 +223,7 @@ Precios confirmados para comparar: ESP32 DevKit V1 (WROOM-32) a 199 en Steren y 
 - Revisar en la pantalla de Roy si J1 (junto al regulador) está abierto o en corto y si R5 está soldado y R4 no; el diseño funciona en los dos casos de J1.
 - Medir la corriente de la retroiluminación desde 3.3 V.
 - Confirmar la versión de la tarjeta (v1.0 o v1.1): el LED RGB está en GPIO48 o en GPIO38.
+- Si la tarjeta es una YD-ESP32-S3: revisar los puentes RGB e IN-OUT (ver Orden de los pines contra la tarjeta física).
 - Firmware: mover teclado, switches y botón al MCP23017 y actualizar los pines en `Sw/AirsoftToolSw/GlobalDefine.h`.
 - Medir el consumo real y la corriente de la retroiluminación.
 - Decidir gabinete y conectores para las tiras y los switches de panel.
