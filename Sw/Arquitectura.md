@@ -80,7 +80,7 @@ Reglas de la figura: una flecha hacia abajo es "usa". Ningún driver lee ni escr
 | `WatchdogDriver` | Watchdog de tareas y de interrupciones | `esp_task_wdt` | Pendiente |
 | `DmaDriver` | Buffers aptos para DMA, copia asíncrona y cola de transferencias | `heap_caps`, `esp_async_memcpy` | Pendiente |
 | `LedStripDriver` | Dos tiras WS2812B (GPIO 3 y 46) | `esp_driver_rmt` | Pendiente |
-| `DisplayDriver` | TFT 480x320, bus paralelo de 16 bits | `esp_lcd` (i80) | Pendiente; usa `DmaDriver` |
+| `DisplayDriver` | TFT 480x320, bus paralelo de 16 bits; controladores ILI9486 y ST7796U (punto 13) | `esp_lcd` (i80) + un panel por controlador | Pendiente; usa `DmaDriver` |
 | `AudioDriver` | MAX98357A por I2S | `esp_driver_i2s` | Pendiente; usa `DmaDriver` |
 | `KeypadDriver` / `InputDriver` | Teclado 4x4, switches y botón | `GpioDriver` | Pendiente |
 | `AdcDriver` | Voltaje de batería (GPIO 10) | `esp_adc` | Pendiente |
@@ -213,14 +213,65 @@ Cada PR parte de `develop` actualizado, lleva su propia branch y actualiza `READ
 | 2 | `WatchdogDriver` | Watchdog de tareas y de interrupciones. |
 | 3 | `DmaDriver` | Buffers aptos para DMA, copia asíncrona y cola, según el punto 5. |
 | 4 | `LedStripDriver` | Tiras WS2812B por RMT (ver decisiones abiertas). |
-| 5 | `DisplayDriver` | TFT por i80 con `DmaDriver`, dibujo por regiones. |
+| 5 | `DisplayDriver` | TFT por i80 con `DmaDriver`, dibujo por regiones, con soporte de ILI9486 y ST7796U según el punto 13 (se puede partir en varios PR: driver con el panel ILI9486, panel ST7796U, touch y LVGL). |
 | 6 | `AudioDriver` | Tonos por I2S con `DmaDriver`. |
 | 7 | `KeypadDriver` / `InputDriver` | Teclado 4x4, switches y botón con antirrebote. |
 | 8 | `AdcDriver` | Voltaje de batería. |
 
 ## 12. Decisiones abiertas
 
-- **PWM:** las tiras son WS2812B (un pin de datos por tira), así que su driver es RMT, no PWM. Un `PwmDriver` solo haría falta para otro uso (por ejemplo atenuar la retroiluminación de la pantalla, que hoy va fija a 5 V). Pendiente decidir si se mantiene en el plan.
+- **PWM:** las tiras son WS2812B (un pin de datos por tira), así que su driver es RMT, no PWM. Un `PwmDriver` solo haría falta para otro uso (por ejemplo atenuar la retroiluminación de la pantalla, que hoy solo se enciende y apaga desde el expansor U6 (GPB4)). Pendiente decidir si se mantiene en el plan.
 - **Orden del PR 0:** se propone hacer el refactor antes de agregar drivers nuevos. Confirmar.
 - **Tabla de particiones:** ya está en `Sw/partitions.csv` y compila, pero los tamaños (3 MB por slot de OTA, 4 MB de `storage`) siguen siendo una estimación hasta tener los recursos reales.
 - **Licencia del proyecto:** sigue sin definirse y aparece como "Por definir" en los headers.
+- **Selección del controlador de pantalla:** en compilación (A) o en ejecución (B), según el punto 13. Pendiente decidir.
+- **Módulo alterno con ST7796U:** falta saber si el módulo que se compraría expone el bus de 16 bits con el mismo conector; si no, cambia el hardware.
+
+## 13. Controladores de pantalla (`DisplayDriver`)
+
+**Requisito:** el firmware debe soportar los controladores **ILI9486** y **ST7796U**, porque el modelo de pantalla puede cambiar según la disponibilidad. Hoy el hardware está pensado para el módulo ILI9486 de 3.5" con bus de 16 bits y touch XPT2046 (el que ya tiene Roy). El ST7796U es la alternativa.
+
+### Estructura
+
+`DisplayDriver` no conoce el controlador: ofrece una API estable (inicializar, dibujar una región, encender o apagar la retroiluminación, consultar la resolución) sobre una capa de panel intercambiable.
+
+```mermaid
+flowchart TB
+  UI["Interfaz (LVGL u otra)"] --> DD["DisplayDriver<br/>API estable"]
+  DD --> BUS["Bus i80 de 16 bits y panel IO (esp_lcd)<br/>común a los dos controladores"]
+  DD --> SEL{"Controlador<br/>seleccionado"}
+  SEL --> P1["PanelIli9486Driver<br/>secuencia de inicio propia"]
+  SEL --> P2["PanelSt7796Driver<br/>secuencia de inicio propia"]
+  P1 --> BUS
+  P2 --> BUS
+```
+
+- **Común a los dos:** el bus i80 de 16 bits con los mismos pines, el formato RGB565 y los comandos de ventana y escritura de memoria. El detalle de cada comando se valida contra la hoja de datos de cada controlador antes de escribir el panel.
+- **Propio de cada panel** (`PanelIli9486Driver.c/.h`, `PanelSt7796Driver.c/.h`): secuencia de inicio, orientación y orden de color (RGB o BGR), inversión de color, retardos de reset y de salida de reposo, y el reloj de píxel máximo que admite cada uno.
+- **ST7796U:** existe el componente oficial `espressif/esp_lcd_st7796` con soporte i80. Falta confirmar que sirva para la variante U: el componente se publica para el ST7796 y su hoja de datos enlazada es la de la ST7796S. Si no sirve tal cual, el panel se escribe con la secuencia de la hoja de datos.
+- **ILI9486:** no se encontró un componente para i80 (el de la comunidad es solo SPI). El panel se escribe a mano sobre `esp_lcd_new_panel_io_i80`.
+- **DMA:** igual que en el punto 5, el DMA del bus lo maneja `esp_lcd`; `DmaDriver` aporta los buffers aptos para DMA y la cola de envíos. Cambiar de controlador no cambia esto.
+
+### Cómo se elige el controlador
+
+No se puede detectar solo: en el hardware v0.8 y en la opción C, `LCD_RD` está fijo a 3.3 V, así que no se puede leer el ID del controlador, y no queda un GPIO libre para moverlo. El controlador se elige por configuración. Opciones:
+
+| Opción | Cómo | A favor | En contra |
+| --- | --- | --- | --- |
+| A. En compilación | Opción de `Kconfig`, un binario por modelo de pantalla. | Lo más simple; sin código de selección en ejecución. | Hay que compilar y flashear el binario correcto; las actualizaciones OTA deben coincidir con el modelo. |
+| B. En ejecución | Un valor en la flash (`FlashDriver`, clave del controlador) leído al arrancar, con ILI9486 por omisión. | Un solo binario para los dos modelos, útil con la actualización OTA de doble partición. | Si se guarda el modelo equivocado, la pantalla queda en blanco: hace falta una forma de corregirlo sin pantalla (comando por el puerto USB o combinación de teclas al arrancar). |
+
+Recomendación: empezar por la **opción A** (más simple) y dejar la interfaz del panel lista para pasar a la B cuando haya más de un modelo en uso. Queda como decisión abierta.
+
+### Compatibilidad física
+
+El hardware v0.8 y la opción C están hechos para el conector de 2x17 pines del módulo ILI9486 de 16 bits. Un módulo con ST7796U que tenga otro conector, otro orden de pines o un bus de 8 bits o SPI no se conecta sin cambiar el hardware. Para el caso de 8 bits, el firmware debe aceptar un ancho de bus configurable (`C_LCD_BUS_WIDTH`, 8 o 16): en 8 bits se usan solo `LCD_D0` a `LCD_D7` (GPIO 4, 5, 6, 7, 15, 16, 17 y 18) y `LCD_D8` a `LCD_D15` quedan libres. Antes de comprar un módulo alterno hay que revisar que exponga el bus de 16 bits con los mismos pines o decidir el cambio de hardware.
+
+### Touch y librería gráfica
+
+- El XPT2046 es independiente del controlador gráfico. Se maneja con `esp_lcd_touch` y la calibración cambia de un módulo a otro, así que se guarda en la flash.
+- LVGL (`esp_lvgl_port`) recibe el panel de `esp_lcd`, así que la capa de panel es lo único que cambia entre controladores.
+
+### Verificación
+
+Sin la pantalla en la mano no se pueden validar las secuencias de inicio. Cada panel queda como "sin probar" hasta ver imagen. Prueba de aceptación por controlador: barras de color (verifica orden RGB y bus), texto y una figura asimétrica (verifica orientación y espejo), cuadro completo y una región pequeña, y medición de los milisegundos por cuadro.
