@@ -335,7 +335,9 @@ static esp_err_t DisplayStart(void)
  */
 esp_err_t DisplayInit(void)
 {
-  if(sIsDisplayReady == true)
+  /* Tambien se rechaza si quedaron recursos de un intento anterior que
+   * DisplayReleaseResources no pudo liberar (DMA aun activo). */
+  if(sIsDisplayReady == true || sI80Bus != NULL || sPanelIo != NULL || sLineBuffer != NULL)
   {
     return ESP_ERR_INVALID_STATE;
   }
@@ -429,7 +431,9 @@ esp_err_t DisplayFillColor(uint16_t color565)
  *              ESP_ERR_INVALID_ARG si el rectangulo esta fuera de la pantalla,
  *              es mayor que el bloque maximo, o pixels es NULL, esta desalineado
  *              o no es memoria apta para DMA.
- *              ESP_ERR_TIMEOUT si el DMA no termina a tiempo.
+ *              ESP_ERR_TIMEOUT si el DMA no termina a tiempo. En ese caso el
+ *              DMA puede seguir leyendo pixels: el llamador NO debe liberarlo
+ *              ni modificarlo hasta que otra llamada al driver devuelva ESP_OK.
  *              Otro error de esp_lcd si falla el envio.
  */
 esp_err_t DisplayDrawBitmap(int xStart, int yStart, int xEnd, int yEnd, const uint16_t *pixels)
@@ -439,7 +443,7 @@ esp_err_t DisplayDrawBitmap(int xStart, int yStart, int xEnd, int yEnd, const ui
     return ESP_ERR_INVALID_STATE;
   }
 
-  if(pixels == NULL || (((uintptr_t)pixels & 1) != 0) || (esp_ptr_dma_capable(pixels) == false) ||
+  if(pixels == NULL || (((uintptr_t)pixels & 1) != 0) ||
      xStart < 0 || yStart < 0 || xEnd < xStart || yEnd < yStart ||
      xEnd >= C_LCD_H_RES || yEnd >= C_LCD_V_RES ||
      (xEnd - xStart + 1) * (yEnd - yStart + 1) > C_LCD_H_RES * C_LCD_BUFFER_LINES)
@@ -447,9 +451,10 @@ esp_err_t DisplayDrawBitmap(int xStart, int yStart, int xEnd, int yEnd, const ui
     return ESP_ERR_INVALID_ARG;
   }
 
-  /* Tambien el ultimo byte del bloque debe estar en memoria apta para DMA */
-  const uint16_t *lastPixel = pixels + ((xEnd - xStart + 1) * (yEnd - yStart + 1)) - 1;
-  if(esp_ptr_dma_capable(lastPixel) == false)
+  /* El primer y el ultimo byte del bloque deben estar en memoria apta para DMA */
+  size_t byteCount = (size_t)(xEnd - xStart + 1) * (size_t)(yEnd - yStart + 1) * C_LCD_BYTES_PER_PIXEL;
+  const uint8_t *lastByte = (const uint8_t *)pixels + byteCount - 1;
+  if(esp_ptr_dma_capable(pixels) == false || esp_ptr_dma_capable(lastByte) == false)
   {
     return ESP_ERR_INVALID_ARG;
   }
